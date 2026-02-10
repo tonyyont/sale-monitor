@@ -361,6 +361,7 @@
     color: var(--green);
     white-space: nowrap;
   }
+  td.price-sale.price-no-discount { color: var(--text); }
   td.price-orig {
     color: var(--text-muted);
     text-decoration: line-through;
@@ -548,6 +549,7 @@
     font-weight: 600;
     color: var(--green);
   }
+  .product-card .card-sale.price-no-discount { color: var(--text); }
   .product-card .card-orig {
     font-size: 11px;
     color: var(--text-muted);
@@ -911,7 +913,7 @@
   <div class="sort-group">
     <button class="toggle-btn" id="favToggle" title="Show favorites only">&#9733; Favs</button>
     <button class="toggle-btn" id="savedToggle">Saved (0)</button>
-    <button class="toggle-btn" id="newToggle">New (0)</button>
+    <button class="toggle-btn" id="allToggle">All Items (0)</button>
     <button class="toggle-btn" id="hiddenToggle">Hidden (0)</button>
     <div class="view-toggle">
       <button class="view-btn active" data-view="table" title="Table view">&#9776;</button>
@@ -994,7 +996,6 @@ let hiddenUrls = new Set();
 let favoriteBrands = new Set();
 let previousSessionUrls = new Set();
 let showHidden = false;
-let showNewOnly = false;
 let showSavedOnly = false;
 let showFavsOnly = false;
 let activeCategory = '';
@@ -1192,7 +1193,6 @@ function applyFilters() {
     if (p.sale_price > maxPrice) return false;
     if (activeCategory && p.category !== activeCategory) return false;
     if (hiddenUrls.has(p.url) && !showHidden) return false;
-    if (showNewOnly && !isNewItem(p.url)) return false;
     if (showSavedOnly && !selectedUrls.has(p.url)) return false;
     if (showFavsOnly && !favoriteBrands.has(p.brand)) return false;
     if (searchQuery) {
@@ -1206,7 +1206,6 @@ function applyFilters() {
   focusedIndex = -1;
   if (viewMode === 'grid') renderGrid(); else renderTable();
   updateHiddenCount();
-  updateNewCount();
   updateSavedCount();
   updateStickyOffset();
 }
@@ -1297,11 +1296,16 @@ function renderTable() {
     html += '<td class="store">' + esc(p.retailer || '') + '</td>';
     html += '<td class="brand">' + (favoriteBrands.has(p.brand) ? '<span class="fav-indicator">\u2605</span>' : '') + esc(p.brand) + '</td>';
     html += '<td class="name"><a href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(p.name) + '</a>' + (isNew ? '<span class="new-badge">NEW</span>' : '') + '</td>';
+    const isFullPrice = p.discount_pct === 0;
     const jpySale = p.sale_price_jpy ? '<span class="jpy-note">\u00a5' + p.sale_price_jpy.toLocaleString() + '</span>' : '';
-    const jpyOrig = p.original_price_jpy ? '<span class="jpy-note">\u00a5' + p.original_price_jpy.toLocaleString() + '</span>' : '';
-    html += '<td class="price-sale">' + formatPrice(p.sale_price, p.currency) + jpySale + '</td>';
-    html += '<td class="price-orig">' + formatPrice(p.original_price, p.currency) + jpyOrig + '</td>';
-    const discLabel = p.discount_pct === 0 ? '--' : p.discount_pct + '%';
+    html += '<td class="price-sale' + (isFullPrice ? ' price-no-discount' : '') + '">' + formatPrice(p.sale_price, p.currency) + jpySale + '</td>';
+    if (isFullPrice) {
+      html += '<td class="price-orig"></td>';
+    } else {
+      const jpyOrig = p.original_price_jpy ? '<span class="jpy-note">\u00a5' + p.original_price_jpy.toLocaleString() + '</span>' : '';
+      html += '<td class="price-orig">' + formatPrice(p.original_price, p.currency) + jpyOrig + '</td>';
+    }
+    const discLabel = isFullPrice ? 'FULL' : p.discount_pct + '%';
     html += '<td class="discount"><span class="discount-badge ' + discountClass(p.discount_pct) + '">' + discLabel + '</span></td>';
     html += '<td class="category cat-col">' + p.category + '</td>';
     html += '<td class="actions">' +
@@ -1342,8 +1346,11 @@ function renderGrid() {
 
     html += '<div class="' + cls + '" data-url="' + esc(p.url) + '" data-idx="' + idx + '">';
     html += '<input type="checkbox" class="card-cb"' + (sel ? ' checked' : '') + ' data-url="' + esc(p.url) + '">';
+    const isFullPrice = p.discount_pct === 0;
     if (isNew) html += '<span class="card-new-badge"><span class="new-badge">NEW</span></span>';
-    html += '<span class="card-discount"><span class="discount-badge ' + discountClass(p.discount_pct) + '">' + p.discount_pct + '%</span></span>';
+    if (!isFullPrice) {
+      html += '<span class="card-discount"><span class="discount-badge ' + discountClass(p.discount_pct) + '">' + p.discount_pct + '%</span></span>';
+    }
     if (p.image_url) {
       html += '<img class="card-img" src="' + esc(p.image_url) + '" loading="lazy" alt="">';
     } else {
@@ -1353,8 +1360,9 @@ function renderGrid() {
     html += '<div class="card-store">' + esc(p.retailer || '') + '</div>';
     html += '<div class="card-brand">' + (favoriteBrands.has(p.brand) ? '\u2605 ' : '') + esc(p.brand) + '</div>';
     html += '<div class="card-name">' + esc(p.name) + '</div>';
-    html += '<div class="card-prices"><span class="card-sale">' + formatPrice(p.sale_price, p.currency) + '</span>';
-    html += '<span class="card-orig">' + formatPrice(p.original_price, p.currency) + '</span></div>';
+    html += '<div class="card-prices"><span class="card-sale' + (isFullPrice ? ' price-no-discount' : '') + '">' + formatPrice(p.sale_price, p.currency) + '</span>';
+    if (!isFullPrice) html += '<span class="card-orig">' + formatPrice(p.original_price, p.currency) + '</span>';
+    html += '</div>';
     html += '</div>';
     html += '<div class="card-actions"><button class="btn-hide' + (hidden ? ' btn-unhide' : '') + '" data-action="hide" data-url="' + esc(p.url) + '">' + (hidden ? 'show' : 'hide') + '</button></div>';
     html += '</div>';
