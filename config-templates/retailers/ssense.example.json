@@ -1,0 +1,20 @@
+{
+  "name": "SSENSE",
+  "enabled": true,
+  "sale_urls": [
+    "https://www.ssense.com/en-us/men/sale/designers/lemaire?sizes=M,32,33,48,9,9.5,10,42,42.5,43&sort=discount-desc",
+    "https://www.ssense.com/en-us/men/sale/designers/maison-margiela?sizes=M,32,33,48,9,9.5,10,42,42.5,43&sort=discount-desc",
+    "https://www.ssense.com/en-us/men/sale/designers/our-legacy?sizes=M,32,33,48,9,9.5,10,42,42.5,43&sort=discount-desc"
+  ],
+  "pagination": {
+    "type": "query",
+    "param": "page",
+    "max_pages": 2
+  },
+  "scrape_options": {
+    "wait_for": 7000,
+    "only_main_content": true,
+    "timeout": 30000
+  },
+  "extraction_hints": "Each product is a markdown image-link block. Inside each block: Brand Name, Product Name, Sale Price ($xxx), Original Price ($xxx). The FIRST dollar amount is the sale price, the SECOND is the original/full price. ~120 products per page."
+}

@@ -1,0 +1,19 @@
+{
+  "name": "Mr Porter",
+  "enabled": true,
+  "sale_urls": [
+    "https://www.mrporter.com/en-us/mens/sale/clothing?facet=ads_f11001_ntk_cs%253A%2522LEMAIRE%2522&facet=ads_f11001_ntk_cs%253A%2522MAISON%2BMARGIELA%2522&facet=ads_f11001_ntk_cs%253A%2522OUR%2BLEGACY%2522&facet=ads_f10005_ntk_cs%253A%2522M%2522",
+    "https://www.mrporter.com/en-us/mens/sale/shoes?facet=ads_f11001_ntk_cs%253A%2522LEMAIRE%2522&facet=ads_f11001_ntk_cs%253A%2522MAISON%2BMARGIELA%2522&facet=ads_f11001_ntk_cs%253A%2522OUR%2BLEGACY%2522&facet=ads_f10512_ntk_cs%253A%2522US%2B9%2522&facet=ads_f10512_ntk_cs%253A%2522US%2B9.5%2522&facet=ads_f10512_ntk_cs%253A%2522US%2B10%2522"
+  ],
+  "pagination": {
+    "type": "query",
+    "param": "pageNumber",
+    "max_pages": 3
+  },
+  "scrape_options": {
+    "wait_for": 7000,
+    "only_main_content": true,
+    "timeout": 30000
+  },
+  "extraction_hints": "Product blocks are markdown links with BRAND, product name, $original_price, XX% off, $sale_price. URLs contain /product/. May include FINAL SALE or FURTHER REDUCED tags."
+}

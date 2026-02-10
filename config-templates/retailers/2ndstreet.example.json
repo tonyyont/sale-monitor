@@ -1,0 +1,31 @@
+{
+  "name": "2ndStreet",
+  "enabled": false,
+  "_setup_instructions": "2ndStreet uses opaque numeric IDs for brands and sizes. To set up: go to https://en.2ndstreet.jp/search, use the site's filters to select your brands/sizes/conditions, hit Search, then give the resulting URL to Claude. Claude will extract the brand[] and size[] params to build this config.",
+  "retailer_type": "secondhand",
+  "currency": "JPY",
+  "url_labels": ["clothing_sale", "shoes_sale", "clothing_new", "shoes_new"],
+  "sale_urls": [
+    "https://en.2ndstreet.jp/search?brand[]=XXXXX&size[]=XX&conditions[]=A&conditions[]=B&sortBy=discount-high&category=910001",
+    "https://en.2ndstreet.jp/search?brand[]=XXXXX&size[]=XX&conditions[]=A&conditions[]=B&sortBy=discount-high&category=961001",
+    "https://en.2ndstreet.jp/search?brand[]=XXXXX&size[]=XX&conditions[]=A&conditions[]=B&sortBy=arrival&category=910001",
+    "https://en.2ndstreet.jp/search?brand[]=XXXXX&size[]=XX&conditions[]=A&conditions[]=B&sortBy=arrival&category=961001"
+  ],
+  "pagination": {
+    "type": "query",
+    "param": "page",
+    "max_pages": 5
+  },
+  "pagination_overrides": {
+    "clothing_sale": { "max_pages": 2, "stop_when": "no_discount" },
+    "shoes_sale": { "max_pages": 2, "stop_when": "no_discount" },
+    "clothing_new": { "max_pages": 10, "stop_when": "seen_before", "threshold": 0.5 },
+    "shoes_new": { "max_pages": 10, "stop_when": "seen_before", "threshold": 0.5 }
+  },
+  "scrape_options": {
+    "wait_for": 7000,
+    "only_main_content": true,
+    "timeout": 30000
+  },
+  "extraction_hints": "Product blocks are markdown links to en.2ndstreet.jp/goods/detail/. Content has optional 'XX% OFF', brand name, product description, size, condition, and price in JPY. ~50 products per page."
+}

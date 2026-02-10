@@ -1,0 +1,7 @@
+output/
+results/
+logs/
+cache/
+viewer/deals.html
+.DS_Store
+__pycache__/

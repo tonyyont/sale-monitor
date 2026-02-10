@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sale Monitor — Deals</title>
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --surface: #1a1a1a;
+    --surface-hover: #242424;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --text-muted: #888;
+    --accent: #c4a265;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --selected: #1e2a1e;
+    --selected-border: #4ade80;
+    --hidden-bg: #1a1418;
+    --controls-height: 52px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    padding: 24px 32px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 20px;
+    font-weight: 300;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .header .meta {
+    display: flex;
+    gap: 24px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .header .meta span { white-space: nowrap; }
+
+  /* Drop zone */
+  .drop-zone {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+  .drop-zone.active { display: flex; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 80px 32px;
+    color: var(--text-muted);
+  }
+  .empty-state h2 {
+    font-weight: 300;
+    font-size: 18px;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+  .empty-state p { font-size: 14px; line-height: 1.6; }
+
+  /* Controls */
+  .controls {
+    padding: 12px 32px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .controls select, .controls input[type="number"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .controls input[type="range"] {
+    width: 80px;
+    accent-color: var(--accent);
+  }
+  .controls select { min-width: 140px; cursor: pointer; }
+  .controls input[type="number"] { width: 90px; }
+  .controls label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* Search input */
+  .search-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    width: 180px;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { outline: none; border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-muted); }
+
+  .category-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .pill {
+    padding: 4px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pill:hover { border-color: var(--accent); color: var(--text); }
+  .pill.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  .sort-group {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .count {
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 0 8px;
+  }
+
+  .toggle-btn {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .toggle-btn:hover { border-color: var(--accent); color: var(--text); }
+  .toggle-btn.active-hidden { background: var(--hidden-bg); border-color: #555; }
+  .toggle-btn.active-new { background: rgba(74,222,128,0.1); border-color: var(--green); color: var(--green); }
+  .toggle-btn.active-saved { background: rgba(74,222,128,0.15); border-color: var(--green); color: var(--green); }
+  .toggle-btn.active-fav { background: rgba(196,162,101,0.1); border-color: var(--accent); color: var(--accent); }
+
+  /* View toggle */
+  .view-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--bg);
+    border-radius: 4px;
+    padding: 2px;
+  }
+  .view-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+  .view-btn:hover { color: var(--text); }
+  .view-btn.active { background: var(--surface-hover); color: var(--accent); }
+
+  /* Brand combobox */
+  .brand-combo { position: relative; }
+  .brand-combo-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    width: 160px;
+    transition: border-color 0.15s;
+  }
+  .brand-combo-input:focus { outline: none; border-color: var(--accent); }
+  .brand-combo-input::placeholder { color: var(--text-muted); }
+  .brand-combo-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 260px;
+    overflow-y: auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    z-index: 200;
+  }
+  .brand-combo-dropdown.open { display: block; }
+  .brand-combo-option {
+    padding: 6px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .brand-combo-option:hover { background: var(--surface-hover); }
+  .brand-combo-option.active { color: var(--accent); }
+  .brand-combo-option .opt-count { font-size: 11px; color: var(--text-muted); }
+  .brand-fav-star {
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-right: 6px;
+    transition: color 0.15s;
+  }
+  .brand-fav-star:hover { color: var(--accent); }
+  .brand-fav-star.favorited { color: var(--accent); }
+
+  /* Table */
+  .table-wrap { padding: 0 32px 100px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    cursor: default;
+    user-select: none;
+    white-space: nowrap;
+    position: sticky;
+    top: var(--controls-height, 52px);
+    background: var(--bg);
+    z-index: 50;
+  }
+  thead th[data-sort] { cursor: pointer; }
+  thead th[data-sort]:hover { color: var(--text); }
+  thead th.sorted { color: var(--accent); }
+  thead th .sort-arrow { margin-left: 4px; font-size: 10px; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+  tbody tr:hover { background: var(--surface-hover); }
+  tbody tr.selected { background: var(--selected); }
+  tbody tr.focused { outline: 1px solid var(--accent); outline-offset: -1px; }
+  tbody tr.hidden-row {
+    opacity: 0.5;
+    background: var(--hidden-bg);
+    border-left: 3px solid #555;
+  }
+  tbody tr.hidden-row:hover { opacity: 0.7; }
+  tbody tr.cortex-engaged { border-left: 3px solid var(--green); }
+
+  .new-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(74,222,128,0.15);
+    color: var(--green);
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  td { padding: 10px 12px; vertical-align: middle; }
+  td.cb { width: 36px; text-align: center; }
+  td.cb input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--green);
+    cursor: pointer;
+  }
+  td.thumb { width: 48px; padding: 4px 8px; }
+  td.thumb img {
+    width: 44px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 3px;
+    background: var(--surface);
+    display: block;
+  }
+  td.thumb .no-img {
+    width: 44px;
+    height: 56px;
+    background: var(--surface);
+    border-radius: 3px;
+    display: block;
+  }
+  td.store {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  td.brand {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  td.brand .fav-indicator { color: var(--accent); margin-right: 2px; }
+  td.name a {
+    color: var(--text);
+    text-decoration: none;
+  }
+  td.name a:hover { text-decoration: underline; color: var(--accent); }
+  td.price-sale {
+    font-weight: 600;
+    color: var(--green);
+    white-space: nowrap;
+  }
+  td.price-orig {
+    color: var(--text-muted);
+    text-decoration: line-through;
+    white-space: nowrap;
+  }
+  .jpy-note {
+    display: block;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 400;
+    text-decoration: none;
+  }
+  td.discount { white-space: nowrap; }
+  .discount-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .discount-low { background: rgba(136, 136, 136, 0.15); color: var(--text-muted); }
+  .discount-50 { background: rgba(250, 204, 21, 0.15); color: var(--yellow); }
+  .discount-60 { background: rgba(251, 146, 60, 0.15); color: var(--orange); }
+  .discount-70 { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+  td.category {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+  }
+  td.actions { white-space: nowrap; }
+  .btn-hide {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .btn-hide:hover { color: var(--red); background: rgba(248,113,113,0.1); }
+  .btn-unhide { color: var(--green); }
+  .btn-unhide:hover { color: var(--green); background: rgba(74,222,128,0.1); }
+  .hidden-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: #666;
+    letter-spacing: 0.5px;
+    margin-left: 4px;
+  }
+
+  /* Floating action bar */
+  .action-bar {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--selected-border);
+    border-radius: 12px;
+    padding: 12px 20px;
+    display: none;
+    align-items: center;
+    gap: 16px;
+    z-index: 200;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .action-bar.visible { display: flex; }
+  .action-bar .count-text {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .action-bar button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-open { background: var(--green); color: #000; }
+  .btn-open:hover { opacity: 0.85; }
+  .btn-copy-urls { background: var(--accent); color: #000; }
+  .btn-copy-urls:hover { opacity: 0.85; }
+  .btn-select-all {
+    background: transparent;
+    border: 1px solid var(--border) !important;
+    color: var(--text);
+  }
+  .btn-select-all:hover { border-color: var(--accent) !important; }
+  .btn-clear { background: transparent; color: var(--text-muted); }
+  .btn-clear:hover { color: var(--text); }
+
+  /* Back to top */
+  .back-to-top {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 150;
+    transition: all 0.15s;
+  }
+  .back-to-top:hover { border-color: var(--accent); color: var(--accent); }
+  .back-to-top.visible { display: flex; }
+
+  /* Grid / Card view */
+  .grid-wrap {
+    padding: 16px 32px 100px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .product-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .product-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .product-card.selected { border-color: var(--selected-border); background: var(--selected); }
+  .product-card.hidden-card { opacity: 0.4; }
+  .product-card.focused { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .product-card .card-img {
+    width: 100%;
+    aspect-ratio: 3/4;
+    object-fit: cover;
+    background: var(--bg);
+    display: block;
+  }
+  .card-img-placeholder {
+    width: 100%;
+    aspect-ratio: 3/4;
+    background: var(--bg);
+    display: block;
+  }
+  .product-card .card-body { padding: 10px; }
+  .product-card .card-store {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    margin-bottom: 2px;
+  }
+  .product-card .card-brand {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+  .product-card .card-name {
+    font-size: 12px;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .product-card .card-prices {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .product-card .card-sale {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--green);
+  }
+  .product-card .card-orig {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-decoration: line-through;
+  }
+  .product-card .card-discount {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+  }
+  .product-card .card-new-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+  }
+  .product-card .card-cb {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--green);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .product-card:hover .card-cb,
+  .product-card.selected .card-cb { opacity: 1; }
+  .product-card .card-actions {
+    position: absolute;
+    bottom: 52px;
+    right: 8px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .product-card:hover .card-actions { opacity: 1; }
+
+  /* Keyboard shortcut help */
+  .kbd-help {
+    position: fixed;
+    bottom: 80px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+    z-index: 150;
+    display: none;
+    line-height: 1.8;
+  }
+  .kbd-help.visible { display: block; }
+  .kbd-help kbd {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  @media (max-width: 768px) {
+    .header, .controls { padding-left: 16px; padding-right: 16px; }
+    .table-wrap { padding: 0 8px 100px; }
+    .grid-wrap { padding: 8px 8px 100px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .controls { gap: 8px; }
+    .sort-group { margin-left: 0; width: 100%; }
+    td.category, th.cat-col { display: none; }
+    .search-input { width: 100%; }
+  }
+
+  /* Triage mode */
+  .triage-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  .triage-overlay.active { display: flex; }
+
+  .triage-card {
+    position: relative;
+    max-width: 680px;
+    width: 90vw;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    animation: triageSlideIn 0.15s ease-out;
+  }
+
+  .triage-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .triage-progress-bar {
+    flex: 1;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .triage-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.2s ease;
+  }
+
+  .triage-img-wrap {
+    position: relative;
+    aspect-ratio: 3/4;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .triage-img-bg {
+    position: absolute;
+    inset: -24px;
+    width: calc(100% + 48px);
+    height: calc(100% + 48px);
+    object-fit: cover;
+    filter: blur(24px) brightness(0.35) saturate(0.8);
+    pointer-events: none;
+  }
+  .triage-img-fg {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .triage-img-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .triage-info {
+    padding: 16px;
+  }
+  .triage-store {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .triage-brand {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .triage-brand .fav-indicator { color: var(--accent); margin-right: 4px; }
+  .triage-name {
+    font-size: 15px;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 12px;
+  }
+  .triage-prices {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+  }
+  .triage-sale-price {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--green);
+  }
+  .triage-orig-price {
+    font-size: 14px;
+    color: var(--text-muted);
+    text-decoration: line-through;
+  }
+  .triage-jpy {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .triage-category {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+  }
+
+  .triage-actions {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .triage-actions kbd {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  .triage-stats {
+    padding: 6px 16px 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .triage-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    border-radius: 12px;
+    z-index: 10;
+  }
+  .triage-flash.flash-save { background: var(--green); animation: triageFlash 0.3s ease-out; }
+  .triage-flash.flash-dismiss { background: var(--red); animation: triageFlash 0.3s ease-out; }
+
+  .triage-summary {
+    max-width: 420px;
+    width: 90vw;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    animation: triageSlideIn 0.15s ease-out;
+  }
+  .triage-summary h2 {
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .triage-summary .summary-count {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+  .triage-summary .summary-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .triage-summary .stat-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .triage-summary .stat-row .stat-label {
+    width: 80px;
+    text-align: right;
+    color: var(--text-muted);
+  }
+  .triage-summary .stat-row .stat-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .triage-summary .stat-row .stat-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+  .triage-summary .stat-row .stat-fill.fill-save { background: var(--green); }
+  .triage-summary .stat-row .stat-fill.fill-dismiss { background: var(--red); }
+  .triage-summary .stat-row .stat-fill.fill-open { background: var(--accent); }
+  .triage-summary .stat-row .stat-fill.fill-skip { background: var(--text-muted); }
+  .triage-summary .stat-row .stat-num { width: 30px; font-weight: 600; }
+  .triage-summary .summary-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  @keyframes triageFlash {
+    0% { opacity: 0.25; }
+    100% { opacity: 0; }
+  }
+  @keyframes triageSlideIn {
+    0% { opacity: 0; transform: translateY(12px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 768px) {
+    .triage-card { width: 100vw; max-width: 100vw; border-radius: 0; }
+    .triage-summary { width: 100vw; max-width: 100vw; border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="drop-zone" id="dropZone">Drop JSON file here</div>
+
+<div class="header">
+  <h1>Sale Monitor</h1>
+  <div class="meta" id="metaInfo">
+    <span>Drop a JSON file or open deals.html</span>
+  </div>
+</div>
+
+<div class="controls" id="controls" style="display:none">
+  <div class="filter-group">
+    <label>Search</label>
+    <input type="text" class="search-input" id="searchInput" placeholder="Brand or product...">
+  </div>
+  <div class="filter-group">
+    <label>Store</label>
+    <div class="category-pills" id="storePills"></div>
+  </div>
+  <div class="filter-group">
+    <label>Brand</label>
+    <div class="brand-combo" id="brandCombo">
+      <input type="text" class="brand-combo-input" id="brandInput" placeholder="All Brands" autocomplete="off">
+      <div class="brand-combo-dropdown" id="brandDropdown"></div>
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Min Discount</label>
+    <input type="range" id="discountSlider" min="0" max="90" step="5" value="50">
+    <span id="discountValue" style="font-size:12px;color:var(--text-muted)">50%</span>
+  </div>
+  <div class="filter-group">
+    <label>Max Price</label>
+    <input type="number" id="maxPrice" placeholder="No limit" min="0" step="50">
+  </div>
+  <div class="filter-group">
+    <label>Category</label>
+    <div class="category-pills" id="categoryPills"></div>
+  </div>
+  <div class="sort-group">
+    <button class="toggle-btn" id="favToggle" title="Show favorites only">&#9733; Favs</button>
+    <button class="toggle-btn" id="savedToggle">Saved (0)</button>
+    <button class="toggle-btn" id="newToggle">New (0)</button>
+    <button class="toggle-btn" id="hiddenToggle">Hidden (0)</button>
+    <div class="view-toggle">
+      <button class="view-btn active" data-view="table" title="Table view">&#9776;</button>
+      <button class="view-btn" data-view="grid" title="Grid view">&#9638;</button>
+    </div>
+    <label>Sort</label>
+    <select id="sortSelect">
+      <option value="discount">Discount %</option>
+      <option value="price-asc">Price: Low &rarr; High</option>
+      <option value="price-desc">Price: High &rarr; Low</option>
+      <option value="brand">Brand A-Z</option>
+    </select>
+  </div>
+  <div class="count" id="resultCount"></div>
+</div>
+
+<div id="content">
+  <div class="empty-state" id="emptyState">
+    <h2>No Data Loaded</h2>
+    <p>Drag and drop a JSON results file here, or open <code>deals.html</code> for pre-loaded data.</p>
+  </div>
+</div>
+
+<div class="action-bar" id="actionBar">
+  <span class="count-text" id="selectedCount">0 selected</span>
+  <button class="btn-select-all" id="btnSelectAll">Select All Visible</button>
+  <button class="btn-copy-urls" id="btnCopyUrls">Copy URLs</button>
+  <button class="btn-open" id="btnOpen">Open All</button>
+  <button class="btn-clear" id="btnClear">Clear</button>
+</div>
+
+<button class="back-to-top" id="backToTop" title="Back to top">&#8593;</button>
+
+<div class="kbd-help" id="kbdHelp">
+  <strong style="color:var(--text)">Keyboard Shortcuts</strong><br>
+  <kbd>j</kbd> / <kbd>k</kbd> &mdash; Navigate rows<br>
+  <kbd>x</kbd> &mdash; Select / deselect<br>
+  <kbd>h</kbd> &mdash; Hide / unhide<br>
+  <kbd>o</kbd> &mdash; Open in new tab<br>
+  <kbd>t</kbd> &mdash; Start triage mode<br>
+  <kbd>Enter</kbd> &mdash; Triage focused item<br>
+  <kbd>?</kbd> &mdash; Toggle this help<br>
+  <kbd>/</kbd> &mdash; Focus search<br>
+  <kbd>Esc</kbd> &mdash; Clear focus / exit triage
+</div>
+
+<div class="triage-overlay" id="triageOverlay">
+  <div class="triage-card" id="triageCard">
+    <div class="triage-progress">
+      <span id="triageCounter">1 of 0</span>
+      <div class="triage-progress-bar"><div class="triage-progress-fill" id="triageProgressFill"></div></div>
+    </div>
+    <div class="triage-img-wrap" id="triageImgWrap"></div>
+    <div class="triage-info" id="triageInfo"></div>
+    <div class="triage-actions">
+      <kbd>&larr;</kbd><kbd>k</kbd> prev &nbsp;
+      <kbd>&rarr;</kbd><kbd>j</kbd> next &nbsp;
+      <kbd>s</kbd> save &nbsp;
+      <kbd>d</kbd> dismiss &nbsp;
+      <kbd>o</kbd> open &nbsp;
+      <kbd>Esc</kbd> exit
+    </div>
+    <div class="triage-stats" id="triageStats"></div>
+    <div class="triage-flash" id="triageFlash"></div>
+  </div>
+  <div class="triage-summary" id="triageSummary" style="display:none"></div>
+</div>
+
+<script>
+(function() {
+'use strict';
+
+const EMBEDDED_DATA = null;
+
+// ── State ──────────────────────────────────────────────
+let allProducts = [];
+let filteredProducts = [];
+let selectedUrls = new Set();
+let hiddenUrls = new Set();
+let favoriteBrands = new Set();
+let previousSessionUrls = new Set();
+let showHidden = false;
+let showNewOnly = false;
+let showSavedOnly = false;
+let showFavsOnly = false;
+let activeCategory = '';
+let activeStore = '';
+let activeBrand = '';
+let searchQuery = '';
+let viewMode = 'table';
+let focusedIndex = -1;
+let kbdHelpVisible = false;
+
+// Triage mode state
+let triageActive = false;
+let triageIndex = 0;
+let triageQueue = [];
+let triageStats = { saved: 0, dismissed: 0, opened: 0, skipped: 0 };
+
+// ── Utilities ──────────────────────────────────────────
+function debounce(fn, ms) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+
+function discountClass(pct) {
+  if (pct >= 70) return 'discount-70';
+  if (pct >= 60) return 'discount-60';
+  if (pct >= 50) return 'discount-50';
+  return 'discount-low';
+}
+
+function formatPrice(n, currency) {
+  if (currency === 'JPY') return '\u00a5' + n.toLocaleString();
+  return '$' + n.toLocaleString();
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── localStorage ───────────────────────────────────────
+function saveHidden() {
+  try { localStorage.setItem('sale-monitor-hidden', JSON.stringify([...hiddenUrls])); } catch {}
+}
+function loadHidden() {
+  try {
+    const s = localStorage.getItem('sale-monitor-hidden');
+    if (s) hiddenUrls = new Set(JSON.parse(s));
+  } catch {}
+}
+function saveFavorites() {
+  try { localStorage.setItem('sale-monitor-favorites', JSON.stringify([...favoriteBrands])); } catch {}
+}
+function loadFavorites() {
+  try {
+    const s = localStorage.getItem('sale-monitor-favorites');
+    if (s) favoriteBrands = new Set(JSON.parse(s));
+  } catch {}
+}
+function saveSessionUrls(urls) {
+  try {
+    localStorage.setItem('sale-monitor-prev-urls', JSON.stringify({
+      urls: [...urls], ts: Date.now()
+    }));
+  } catch {}
+}
+function loadPreviousSessionUrls() {
+  try {
+    const s = localStorage.getItem('sale-monitor-prev-urls');
+    if (s) previousSessionUrls = new Set(JSON.parse(s).urls || []);
+  } catch {}
+}
+function isNewItem(url) {
+  return previousSessionUrls.size > 0 && !previousSessionUrls.has(url);
+}
+
+// ── Dynamic sticky offset ─────────────────────────────
+function updateStickyOffset() {
+  const ctrl = document.getElementById('controls');
+  if (ctrl && ctrl.style.display !== 'none') {
+    document.documentElement.style.setProperty('--controls-height', ctrl.offsetHeight + 'px');
+  }
+}
+const resizeObserver = new ResizeObserver(updateStickyOffset);
+
+// ── Image error handler (capture phase — error doesn't bubble) ──
+document.getElementById('content').addEventListener('error', function(e) {
+  if (e.target.tagName !== 'IMG') return;
+  if (e.target.closest('.product-card')) {
+    const div = document.createElement('div');
+    div.className = 'card-img-placeholder';
+    e.target.replaceWith(div);
+  } else {
+    const span = document.createElement('span');
+    span.className = 'no-img';
+    e.target.replaceWith(span);
+  }
+}, true);
+
+// ── Render meta ────────────────────────────────────────
+function renderMeta(meta) {
+  const date = meta.scraped_at ? new Date(meta.scraped_at).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  }) : 'Unknown';
+  document.getElementById('metaInfo').innerHTML =
+    '<span>' + date + '</span>' +
+    '<span>' + (meta.retailers ? meta.retailers.join(', ') : 'N/A') + '</span>' +
+    '<span>' + (meta.total_filtered || 0) + ' deals</span>' +
+    '<span>&ge;' + (meta.min_discount_pct || 0) + '% off</span>' +
+    (meta.jpy_usd_rate ? '<span>\u00a5\u2192$ @ ' + meta.jpy_usd_rate + '</span>' : '');
+}
+
+// ── Populate filters ───────────────────────────────────
+function populateFilters() {
+  // Store pills
+  const stores = [...new Set(allProducts.map(p => p.retailer).filter(Boolean))].sort();
+  const storePillsEl = document.getElementById('storePills');
+  storePillsEl.innerHTML = '<button class="pill active" data-store="">All</button>';
+  stores.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'pill';
+    btn.dataset.store = s;
+    btn.textContent = s;
+    storePillsEl.appendChild(btn);
+  });
+  storePillsEl.addEventListener('click', e => {
+    if (!e.target.classList.contains('pill')) return;
+    storePillsEl.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    e.target.classList.add('active');
+    activeStore = e.target.dataset.store;
+    applyFilters();
+  });
+
+  // Category pills
+  const cats = [...new Set(allProducts.map(p => p.category))].sort();
+  const pillsEl = document.getElementById('categoryPills');
+  pillsEl.innerHTML = '<button class="pill active" data-cat="">All</button>';
+  cats.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'pill';
+    btn.dataset.cat = c;
+    btn.textContent = c;
+    pillsEl.appendChild(btn);
+  });
+  pillsEl.addEventListener('click', e => {
+    if (!e.target.classList.contains('pill')) return;
+    pillsEl.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    e.target.classList.add('active');
+    activeCategory = e.target.dataset.cat;
+    applyFilters();
+  });
+
+  populateBrandDropdown();
+}
+
+function populateBrandDropdown(filter) {
+  const brandCounts = {};
+  allProducts.forEach(p => { brandCounts[p.brand] = (brandCounts[p.brand] || 0) + 1; });
+  const lower = (filter || '').toLowerCase();
+  const brands = Object.keys(brandCounts)
+    .filter(b => !filter || b.toLowerCase().includes(lower))
+    .sort((a, b) => {
+      const af = favoriteBrands.has(a) ? 0 : 1;
+      const bf = favoriteBrands.has(b) ? 0 : 1;
+      return af !== bf ? af - bf : a.localeCompare(b);
+    });
+
+  const dd = document.getElementById('brandDropdown');
+  let html = '<div class="brand-combo-option' + (!activeBrand ? ' active' : '') +
+    '" data-brand=""><span>All Brands</span><span class="opt-count">' + allProducts.length + '</span></div>';
+  brands.forEach(b => {
+    const fav = favoriteBrands.has(b);
+    html += '<div class="brand-combo-option' + (activeBrand === b ? ' active' : '') +
+      '" data-brand="' + esc(b) + '"><span>' +
+      '<span class="brand-fav-star' + (fav ? ' favorited' : '') +
+      '" data-fav-brand="' + esc(b) + '">' + (fav ? '\u2605' : '\u2606') + '</span>' +
+      esc(b) + '</span><span class="opt-count">' + brandCounts[b] + '</span></div>';
+  });
+  dd.innerHTML = html;
+}
+
+// ── Apply filters ──────────────────────────────────────
+function applyFilters() {
+  const minDiscount = parseInt(document.getElementById('discountSlider').value);
+  const maxPrice = parseInt(document.getElementById('maxPrice').value) || Infinity;
+  document.getElementById('discountValue').textContent = minDiscount + '%';
+
+  filteredProducts = allProducts.filter(p => {
+    if (activeStore && p.retailer !== activeStore) return false;
+    if (activeBrand && p.brand !== activeBrand) return false;
+    if (p.retailer_type !== 'secondhand' && p.discount_pct < minDiscount) return false;
+    if (p.sale_price > maxPrice) return false;
+    if (activeCategory && p.category !== activeCategory) return false;
+    if (hiddenUrls.has(p.url) && !showHidden) return false;
+    if (showNewOnly && !isNewItem(p.url)) return false;
+    if (showSavedOnly && !selectedUrls.has(p.url)) return false;
+    if (showFavsOnly && !favoriteBrands.has(p.brand)) return false;
+    if (searchQuery) {
+      const hay = (p.brand + ' ' + p.name).toLowerCase();
+      if (!hay.includes(searchQuery.toLowerCase())) return false;
+    }
+    return true;
+  });
+
+  sortProducts();
+  focusedIndex = -1;
+  if (viewMode === 'grid') renderGrid(); else renderTable();
+  updateHiddenCount();
+  updateNewCount();
+  updateSavedCount();
+  updateStickyOffset();
+}
+
+function sortProducts() {
+  const sort = document.getElementById('sortSelect').value;
+  filteredProducts.sort((a, b) => {
+    const aH = hiddenUrls.has(a.url) ? 1 : 0;
+    const bH = hiddenUrls.has(b.url) ? 1 : 0;
+    if (aH !== bH) return aH - bH;
+    const aN = isNewItem(a.url) ? 0 : 1;
+    const bN = isNewItem(b.url) ? 0 : 1;
+    if (aN !== bN) return aN - bN;
+    switch (sort) {
+      case 'discount': return b.discount_pct - a.discount_pct;
+      case 'price-asc': return a.sale_price - b.sale_price;
+      case 'price-desc': return b.sale_price - a.sale_price;
+      case 'brand': return a.brand.localeCompare(b.brand) || b.discount_pct - a.discount_pct;
+      default: return 0;
+    }
+  });
+}
+
+// ── Render table ───────────────────────────────────────
+function renderTable() {
+  const content = document.getElementById('content');
+  const visibleCount = filteredProducts.filter(p => !hiddenUrls.has(p.url)).length;
+  document.getElementById('resultCount').textContent = visibleCount + ' deals';
+
+  if (filteredProducts.length === 0) {
+    content.innerHTML = '<div class="empty-state"><h2>No Matching Deals</h2><p>Try adjusting your filters.</p></div>';
+    return;
+  }
+
+  const sortVal = document.getElementById('sortSelect').value;
+  const sortFieldMap = { 'discount': 'discount', 'price-asc': 'price', 'price-desc': 'price', 'brand': 'brand' };
+  const activeField = sortFieldMap[sortVal];
+  const sortDir = (sortVal === 'price-asc') ? '\u2191' : '\u2193';
+
+  const cols = [
+    { label: 'Store', field: null },
+    { label: 'Brand', field: 'brand' },
+    { label: 'Product', field: null },
+    { label: 'Sale', field: 'price' },
+    { label: 'Was', field: null },
+    { label: 'Off', field: 'discount' },
+    { label: 'Category', field: null, cls: 'cat-col' },
+    { label: '', field: null }
+  ];
+
+  let html = '<div class="table-wrap"><table><thead><tr>';
+  html += '<th><input type="checkbox" id="selectAllCb" title="Select all visible"></th>';
+  html += '<th></th>';
+  cols.forEach(col => {
+    const sorted = col.field && col.field === activeField;
+    const classes = [];
+    if (col.cls) classes.push(col.cls);
+    if (sorted) classes.push('sorted');
+    const clsStr = classes.length ? ' class="' + classes.join(' ') + '"' : '';
+    const sortAttr = col.field ? ' data-sort="' + col.field + '"' : '';
+    const arrow = sorted ? '<span class="sort-arrow">' + sortDir + '</span>' : '';
+    html += '<th' + clsStr + sortAttr + '>' + col.label + arrow + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  filteredProducts.forEach((p, idx) => {
+    const sel = selectedUrls.has(p.url);
+    const hidden = hiddenUrls.has(p.url);
+    const engaged = p.cortex_status === 'engaged';
+    const isNew = isNewItem(p.url);
+    const focused = idx === focusedIndex;
+    const cls = [
+      sel ? 'selected' : '',
+      hidden ? 'hidden-row' : '',
+      engaged ? 'cortex-engaged' : '',
+      focused ? 'focused' : ''
+    ].filter(Boolean).join(' ');
+
+    html += '<tr' + (cls ? ' class="' + cls + '"' : '') + ' data-url="' + esc(p.url) + '" data-idx="' + idx + '">';
+    html += '<td class="cb"><input type="checkbox"' + (sel ? ' checked' : '') + ' data-url="' + esc(p.url) + '"></td>';
+    html += '<td class="thumb">';
+    if (p.image_url) {
+      html += '<a href="' + esc(p.url) + '" target="_blank" rel="noopener"><img src="' + esc(p.image_url) + '" loading="lazy" alt=""></a>';
+    } else {
+      html += '<span class="no-img"></span>';
+    }
+    html += '</td>';
+    html += '<td class="store">' + esc(p.retailer || '') + '</td>';
+    html += '<td class="brand">' + (favoriteBrands.has(p.brand) ? '<span class="fav-indicator">\u2605</span>' : '') + esc(p.brand) + '</td>';
+    html += '<td class="name"><a href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(p.name) + '</a>' + (isNew ? '<span class="new-badge">NEW</span>' : '') + '</td>';
+    const jpySale = p.sale_price_jpy ? '<span class="jpy-note">\u00a5' + p.sale_price_jpy.toLocaleString() + '</span>' : '';
+    const jpyOrig = p.original_price_jpy ? '<span class="jpy-note">\u00a5' + p.original_price_jpy.toLocaleString() + '</span>' : '';
+    html += '<td class="price-sale">' + formatPrice(p.sale_price, p.currency) + jpySale + '</td>';
+    html += '<td class="price-orig">' + formatPrice(p.original_price, p.currency) + jpyOrig + '</td>';
+    const discLabel = p.discount_pct === 0 ? '--' : p.discount_pct + '%';
+    html += '<td class="discount"><span class="discount-badge ' + discountClass(p.discount_pct) + '">' + discLabel + '</span></td>';
+    html += '<td class="category cat-col">' + p.category + '</td>';
+    html += '<td class="actions">' +
+      (hidden ? '<span class="hidden-label">HIDDEN</span>' : '') +
+      '<button class="btn-hide' + (hidden ? ' btn-unhide' : '') + '" data-action="hide" data-url="' + esc(p.url) + '">' + (hidden ? 'show' : 'hide') + '</button></td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  content.innerHTML = html;
+  updateSelectAllCb();
+  updateActionBar();
+}
+
+// ── Render grid ────────────────────────────────────────
+function renderGrid() {
+  const content = document.getElementById('content');
+  const visibleCount = filteredProducts.filter(p => !hiddenUrls.has(p.url)).length;
+  document.getElementById('resultCount').textContent = visibleCount + ' deals';
+
+  if (filteredProducts.length === 0) {
+    content.innerHTML = '<div class="empty-state"><h2>No Matching Deals</h2><p>Try adjusting your filters.</p></div>';
+    return;
+  }
+
+  let html = '<div class="grid-wrap">';
+  filteredProducts.forEach((p, idx) => {
+    const sel = selectedUrls.has(p.url);
+    const hidden = hiddenUrls.has(p.url);
+    const isNew = isNewItem(p.url);
+    const focused = idx === focusedIndex;
+    const cls = [
+      'product-card',
+      sel ? 'selected' : '',
+      hidden ? 'hidden-card' : '',
+      focused ? 'focused' : ''
+    ].filter(Boolean).join(' ');
+
+    html += '<div class="' + cls + '" data-url="' + esc(p.url) + '" data-idx="' + idx + '">';
+    html += '<input type="checkbox" class="card-cb"' + (sel ? ' checked' : '') + ' data-url="' + esc(p.url) + '">';
+    if (isNew) html += '<span class="card-new-badge"><span class="new-badge">NEW</span></span>';
+    html += '<span class="card-discount"><span class="discount-badge ' + discountClass(p.discount_pct) + '">' + p.discount_pct + '%</span></span>';
+    if (p.image_url) {
+      html += '<img class="card-img" src="' + esc(p.image_url) + '" loading="lazy" alt="">';
+    } else {
+      html += '<div class="card-img-placeholder"></div>';
+    }
+    html += '<div class="card-body">';
+    html += '<div class="card-store">' + esc(p.retailer || '') + '</div>';
+    html += '<div class="card-brand">' + (favoriteBrands.has(p.brand) ? '\u2605 ' : '') + esc(p.brand) + '</div>';
+    html += '<div class="card-name">' + esc(p.name) + '</div>';
+    html += '<div class="card-prices"><span class="card-sale">' + formatPrice(p.sale_price, p.currency) + '</span>';
+    html += '<span class="card-orig">' + formatPrice(p.original_price, p.currency) + '</span></div>';
+    html += '</div>';
+    html += '<div class="card-actions"><button class="btn-hide' + (hidden ? ' btn-unhide' : '') + '" data-action="hide" data-url="' + esc(p.url) + '">' + (hidden ? 'show' : 'hide') + '</button></div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  content.innerHTML = html;
+  updateActionBar();
+}
+
+// ── Event delegation on #content ───────────────────────
+document.getElementById('content').addEventListener('click', function(e) {
+  var target = e.target;
+
+  // Hide/show button
+  if (target.dataset && target.dataset.action === 'hide') {
+    e.stopPropagation();
+    var url = target.dataset.url;
+    if (hiddenUrls.has(url)) hiddenUrls.delete(url);
+    else { hiddenUrls.add(url); selectedUrls.delete(url); }
+    saveHidden();
+    applyFilters();
+    return;
+  }
+
+  // Column header sort
+  var th = target.closest('th[data-sort]');
+  if (th) {
+    var field = th.dataset.sort;
+    var sel = document.getElementById('sortSelect');
+    if (field === 'price') {
+      sel.value = (sel.value === 'price-asc') ? 'price-desc' : 'price-asc';
+    } else {
+      sel.value = field;
+    }
+    applyFilters();
+    return;
+  }
+
+  // Checkbox
+  if (target.type === 'checkbox' && target.dataset.url) {
+    e.stopPropagation();
+    var cbUrl = target.dataset.url;
+    if (target.checked) selectedUrls.add(cbUrl); else selectedUrls.delete(cbUrl);
+    var row = target.closest('tr') || target.closest('.product-card');
+    if (row) row.classList.toggle('selected', target.checked);
+    updateActionBar();
+    updateSelectAllCb();
+    return;
+  }
+
+  // Select-all checkbox
+  if (target.id === 'selectAllCb') {
+    var visible = filteredProducts.filter(function(p) { return !hiddenUrls.has(p.url); });
+    if (target.checked) visible.forEach(function(p) { selectedUrls.add(p.url); });
+    else visible.forEach(function(p) { selectedUrls.delete(p.url); });
+    if (viewMode === 'grid') renderGrid(); else renderTable();
+    return;
+  }
+
+  // Don't toggle on links, buttons, inputs, or images inside links
+  if (target.tagName === 'A' || target.tagName === 'BUTTON' || target.tagName === 'INPUT') return;
+  if (target.tagName === 'IMG' && target.closest('a')) return;
+
+  // Row/card click toggles selection
+  var item = target.closest('tr[data-url]') || target.closest('.product-card[data-url]');
+  if (item) {
+    var itemUrl = item.dataset.url;
+    var isSel = selectedUrls.has(itemUrl);
+    if (isSel) selectedUrls.delete(itemUrl); else selectedUrls.add(itemUrl);
+    item.classList.toggle('selected', !isSel);
+    var cb = item.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = !isSel;
+    if (item.dataset.idx !== undefined) focusedIndex = parseInt(item.dataset.idx);
+    updateActionBar();
+    updateSelectAllCb();
+  }
+});
+
+function updateSelectAllCb() {
+  var cb = document.getElementById('selectAllCb');
+  if (!cb) return;
+  var visible = filteredProducts.filter(function(p) { return !hiddenUrls.has(p.url); });
+  cb.checked = visible.length > 0 && visible.every(function(p) { return selectedUrls.has(p.url); });
+}
+
+function updateActionBar() {
+  var bar = document.getElementById('actionBar');
+  var n = selectedUrls.size;
+  if (n > 0) {
+    bar.classList.add('visible');
+    document.getElementById('selectedCount').textContent = n + ' selected';
+  } else {
+    bar.classList.remove('visible');
+  }
+  updateSavedCount();
+}
+
+function updateHiddenCount() {
+  var btn = document.getElementById('hiddenToggle');
+  var total = allProducts.filter(function(p) { return hiddenUrls.has(p.url); }).length;
+  var filtered = allProducts.filter(function(p) {
+    if (!hiddenUrls.has(p.url)) return false;
+    if (activeStore && p.retailer !== activeStore) return false;
+    if (activeBrand && p.brand !== activeBrand) return false;
+    if (activeCategory && p.category !== activeCategory) return false;
+    return true;
+  }).length;
+  var label = (filtered === total) ? total : filtered + '/' + total;
+  btn.textContent = showHidden ? 'Hide Hidden (' + label + ')' : 'Show Hidden (' + label + ')';
+  btn.classList.toggle('active-hidden', showHidden);
+}
+
+function updateNewCount() {
+  var btn = document.getElementById('newToggle');
+  var count = allProducts.filter(function(p) { return isNewItem(p.url); }).length;
+  btn.textContent = showNewOnly ? 'All Items' : 'New (' + count + ')';
+  btn.classList.toggle('active-new', showNewOnly);
+}
+
+function updateSavedCount() {
+  var btn = document.getElementById('savedToggle');
+  var count = selectedUrls.size;
+  btn.textContent = 'Saved (' + count + ')';
+  btn.classList.toggle('active-saved', showSavedOnly);
+}
+
+// ── Action bar buttons ─────────────────────────────────
+document.getElementById('btnOpen').addEventListener('click', function() {
+  var urls = [...selectedUrls];
+  if (urls.length > 10) {
+    if (!confirm('Open ' + urls.length + ' tabs?')) return;
+  }
+  urls.forEach(function(url) { window.open(url, '_blank'); });
+});
+
+document.getElementById('btnCopyUrls').addEventListener('click', function() {
+  var text = [...selectedUrls].join('\n');
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('btnCopyUrls');
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = 'Copy URLs'; }, 1500);
+  });
+});
+
+document.getElementById('btnSelectAll').addEventListener('click', function() {
+  filteredProducts.filter(function(p) { return !hiddenUrls.has(p.url); })
+    .forEach(function(p) { selectedUrls.add(p.url); });
+  if (viewMode === 'grid') renderGrid(); else renderTable();
+});
+
+document.getElementById('btnClear').addEventListener('click', function() {
+  selectedUrls.clear();
+  if (viewMode === 'grid') renderGrid(); else renderTable();
+});
+
+document.getElementById('hiddenToggle').addEventListener('click', function() {
+  showHidden = !showHidden;
+  applyFilters();
+});
+
+document.getElementById('newToggle').addEventListener('click', function() {
+  showNewOnly = !showNewOnly;
+  applyFilters();
+});
+
+document.getElementById('savedToggle').addEventListener('click', function() {
+  showSavedOnly = !showSavedOnly;
+  applyFilters();
+});
+
+document.getElementById('favToggle').addEventListener('click', function() {
+  showFavsOnly = !showFavsOnly;
+  document.getElementById('favToggle').classList.toggle('active-fav', showFavsOnly);
+  applyFilters();
+});
+
+// ── View toggle ────────────────────────────────────────
+document.querySelector('.view-toggle').addEventListener('click', function(e) {
+  var btn = e.target.closest('.view-btn');
+  if (!btn) return;
+  document.querySelectorAll('.view-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  viewMode = btn.dataset.view;
+  focusedIndex = -1;
+  if (viewMode === 'grid') renderGrid(); else renderTable();
+});
+
+// ── Brand combobox ─────────────────────────────────────
+var brandInput = document.getElementById('brandInput');
+var brandDropdown = document.getElementById('brandDropdown');
+
+brandInput.addEventListener('focus', function() {
+  populateBrandDropdown(brandInput.value);
+  brandDropdown.classList.add('open');
+});
+
+brandInput.addEventListener('input', function() {
+  populateBrandDropdown(brandInput.value);
+  brandDropdown.classList.add('open');
+  if (!brandInput.value.trim() && activeBrand) {
+    activeBrand = '';
+    applyFilters();
+  }
+});
+
+brandDropdown.addEventListener('click', function(e) {
+  // Star click — toggle favorite
+  var star = e.target.closest('.brand-fav-star');
+  if (star) {
+    e.stopPropagation();
+    var brand = star.dataset.favBrand;
+    if (favoriteBrands.has(brand)) favoriteBrands.delete(brand);
+    else favoriteBrands.add(brand);
+    saveFavorites();
+    populateBrandDropdown(brandInput.value);
+    applyFilters();
+    return;
+  }
+  // Option click — select brand
+  var opt = e.target.closest('.brand-combo-option');
+  if (opt) {
+    activeBrand = opt.dataset.brand;
+    brandInput.value = activeBrand || '';
+    brandInput.placeholder = activeBrand || 'All Brands';
+    brandDropdown.classList.remove('open');
+    applyFilters();
+  }
+});
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#brandCombo')) {
+    brandDropdown.classList.remove('open');
+  }
+});
+
+// ── Filter event listeners ─────────────────────────────
+var debouncedApply = debounce(applyFilters, 120);
+
+document.getElementById('searchInput').addEventListener('input', function(e) {
+  searchQuery = e.target.value;
+  debouncedApply();
+});
+
+document.getElementById('discountSlider').addEventListener('input', function() {
+  document.getElementById('discountValue').textContent =
+    document.getElementById('discountSlider').value + '%';
+  debouncedApply();
+});
+
+document.getElementById('maxPrice').addEventListener('input', debouncedApply);
+document.getElementById('sortSelect').addEventListener('change', applyFilters);
+
+// ── Back to top ────────────────────────────────────────
+var backToTopBtn = document.getElementById('backToTop');
+window.addEventListener('scroll', function() {
+  backToTopBtn.classList.toggle('visible', window.scrollY > 400);
+}, { passive: true });
+backToTopBtn.addEventListener('click', function() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ── Triage mode ────────────────────────────────────────
+function enterTriage(startIndex) {
+  if (!filteredProducts.length) return;
+  triageQueue = filteredProducts.filter(function(p) {
+    return !selectedUrls.has(p.url) && !hiddenUrls.has(p.url);
+  });
+  triageIndex = Math.max(0, Math.min(startIndex || 0, triageQueue.length - 1));
+  triageStats = { saved: 0, dismissed: 0, opened: 0, skipped: 0 };
+  triageActive = true;
+  document.getElementById('triageCard').style.display = '';
+  document.getElementById('triageSummary').style.display = 'none';
+  document.getElementById('triageOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  renderTriageCard();
+}
+
+function exitTriage() {
+  triageActive = false;
+  document.getElementById('triageOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+  applyFilters();
+}
+
+function renderTriageCard() {
+  if (triageIndex < 0 || triageIndex >= triageQueue.length) {
+    showTriageSummary();
+    return;
+  }
+  var p = triageQueue[triageIndex];
+  var total = triageQueue.length;
+
+  // Counter + progress
+  document.getElementById('triageCounter').textContent = (triageIndex + 1) + ' of ' + total;
+  document.getElementById('triageProgressFill').style.width = ((triageIndex + 1) / total * 100) + '%';
+
+  // Image — blurred bg fill + sharp foreground
+  var imgWrap = document.getElementById('triageImgWrap');
+  if (p.image_url) {
+    imgWrap.innerHTML = '<img class="triage-img-bg" src="' + esc(p.image_url) + '" alt="">' +
+      '<img class="triage-img-fg" src="' + esc(p.image_url) + '" alt="">';
+  } else {
+    imgWrap.innerHTML = '<div class="triage-img-placeholder">No image</div>';
+  }
+
+  // Info
+  var isNew = isNewItem(p.url);
+  var isSaved = selectedUrls.has(p.url);
+  var isDismissed = hiddenUrls.has(p.url);
+  var info = '';
+  info += '<div class="triage-store"><span>' + esc(p.retailer || '') + '</span>';
+  if (isNew) info += '<span class="new-badge">NEW</span>';
+  if (isSaved) info += '<span style="color:var(--green);font-size:11px;font-weight:600">SAVED</span>';
+  if (isDismissed) info += '<span class="hidden-label">HIDDEN</span>';
+  info += '</div>';
+  info += '<div class="triage-brand">' + (favoriteBrands.has(p.brand) ? '<span class="fav-indicator">\u2605</span>' : '') + esc(p.brand) + '</div>';
+  info += '<div class="triage-name">' + esc(p.name) + '</div>';
+  info += '<div class="triage-prices">';
+  info += '<span class="triage-sale-price">' + formatPrice(p.sale_price, p.currency) + '</span>';
+  info += '<span class="triage-orig-price">' + formatPrice(p.original_price, p.currency) + '</span>';
+  var discLabel = p.discount_pct === 0 ? '--' : p.discount_pct + '%';
+  info += '<span class="discount-badge ' + discountClass(p.discount_pct) + '">' + discLabel + '</span>';
+  info += '</div>';
+  if (p.sale_price_jpy) {
+    info += '<div class="triage-jpy">\u00a5' + p.sale_price_jpy.toLocaleString() + ' (was \u00a5' + p.original_price_jpy.toLocaleString() + ')</div>';
+  }
+  info += '<div class="triage-category">' + esc(p.category) + '</div>';
+  document.getElementById('triageInfo').innerHTML = info;
+
+  // Stats
+  var parts = [];
+  if (triageStats.saved) parts.push(triageStats.saved + ' saved');
+  if (triageStats.dismissed) parts.push(triageStats.dismissed + ' dismissed');
+  if (triageStats.opened) parts.push(triageStats.opened + ' opened');
+  document.getElementById('triageStats').textContent = parts.length ? parts.join(' \u00b7 ') : '';
+
+  // Re-trigger slide animation
+  var card = document.getElementById('triageCard');
+  card.style.animation = 'none';
+  card.offsetHeight; // force reflow
+  card.style.animation = '';
+}
+
+function triageAction(action) {
+  if (triageIndex < 0 || triageIndex >= triageQueue.length) return;
+  var p = triageQueue[triageIndex];
+
+  switch (action) {
+    case 'save':
+      selectedUrls.add(p.url);
+      hiddenUrls.delete(p.url);
+      triageStats.saved++;
+      showTriageFlash('save');
+      triageIndex++;
+      if (triageIndex >= triageQueue.length) { showTriageSummary(); return; }
+      renderTriageCard();
+      break;
+    case 'dismiss':
+      hiddenUrls.add(p.url);
+      selectedUrls.delete(p.url);
+      saveHidden();
+      triageStats.dismissed++;
+      showTriageFlash('dismiss');
+      triageIndex++;
+      if (triageIndex >= triageQueue.length) { showTriageSummary(); return; }
+      renderTriageCard();
+      break;
+    case 'open':
+      window.open(p.url, '_blank');
+      triageStats.opened++;
+      renderTriageCard(); // stay on card, but update stats
+      break;
+    case 'next':
+      triageStats.skipped++;
+      triageIndex++;
+      if (triageIndex >= triageQueue.length) { showTriageSummary(); return; }
+      renderTriageCard();
+      break;
+    case 'prev':
+      if (triageIndex > 0) {
+        triageIndex--;
+        renderTriageCard();
+      }
+      break;
+  }
+}
+
+function showTriageFlash(type) {
+  var flash = document.getElementById('triageFlash');
+  flash.className = 'triage-flash';
+  flash.offsetHeight; // force reflow
+  flash.classList.add('flash-' + type);
+}
+
+function showTriageSummary() {
+  document.getElementById('triageCard').style.display = 'none';
+  var total = triageQueue.length;
+  var s = triageStats;
+  var maxStat = Math.max(s.saved, s.dismissed, s.opened, s.skipped, 1);
+
+  function statRow(label, count, fillClass) {
+    var pct = (count / maxStat * 100);
+    return '<div class="stat-row">' +
+      '<span class="stat-label">' + label + '</span>' +
+      '<span class="stat-num">' + count + '</span>' +
+      '<div class="stat-bar"><div class="stat-fill ' + fillClass + '" style="width:' + pct + '%"></div></div>' +
+      '</div>';
+  }
+
+  var html = '<h2>Triage Complete</h2>';
+  html += '<div class="summary-count">' + total + ' items reviewed</div>';
+  html += '<div class="summary-stats">';
+  html += statRow('saved', s.saved, 'fill-save');
+  html += statRow('dismissed', s.dismissed, 'fill-dismiss');
+  html += statRow('opened', s.opened, 'fill-open');
+  html += statRow('skipped', s.skipped, 'fill-skip');
+  html += '</div>';
+  html += '<div class="summary-hint">Press <kbd>Esc</kbd> to return</div>';
+
+  var summary = document.getElementById('triageSummary');
+  summary.innerHTML = html;
+  summary.style.display = '';
+}
+
+function handleTriageKey(e) {
+  switch (e.key) {
+    case 'ArrowRight': case 'j': case ' ':
+      e.preventDefault();
+      triageAction('next');
+      break;
+    case 'ArrowLeft': case 'k':
+      e.preventDefault();
+      triageAction('prev');
+      break;
+    case 's':
+      e.preventDefault();
+      triageAction('save');
+      break;
+    case 'd':
+      e.preventDefault();
+      triageAction('dismiss');
+      break;
+    case 'o': case 'Enter':
+      e.preventDefault();
+      triageAction('open');
+      break;
+    case 'Escape':
+      e.preventDefault();
+      exitTriage();
+      break;
+  }
+}
+
+// Double-click to enter triage
+document.getElementById('content').addEventListener('dblclick', function(e) {
+  var item = e.target.closest('tr[data-idx]') || e.target.closest('.product-card[data-idx]');
+  if (item) {
+    e.preventDefault();
+    enterTriage(parseInt(item.dataset.idx));
+  }
+});
+
+// ── Keyboard navigation ───────────────────────────────
+document.addEventListener('keydown', function(e) {
+  // Skip when typing in inputs
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+    if (e.key === 'Escape') e.target.blur();
+    return;
+  }
+
+  // Triage mode intercepts all keys
+  if (triageActive) {
+    handleTriageKey(e);
+    return;
+  }
+
+  switch (e.key) {
+    case 'j':
+      e.preventDefault();
+      if (!filteredProducts.length) return;
+      focusedIndex = Math.min(focusedIndex + 1, filteredProducts.length - 1);
+      updateFocus();
+      break;
+    case 'k':
+      e.preventDefault();
+      if (!filteredProducts.length) return;
+      focusedIndex = Math.max(focusedIndex - 1, 0);
+      updateFocus();
+      break;
+    case 'x':
+      e.preventDefault();
+      if (focusedIndex >= 0 && focusedIndex < filteredProducts.length) {
+        var p = filteredProducts[focusedIndex];
+        if (selectedUrls.has(p.url)) selectedUrls.delete(p.url);
+        else selectedUrls.add(p.url);
+        if (viewMode === 'grid') renderGrid(); else renderTable();
+        updateFocus();
+      }
+      break;
+    case 'h':
+      e.preventDefault();
+      if (focusedIndex >= 0 && focusedIndex < filteredProducts.length) {
+        var hp = filteredProducts[focusedIndex];
+        if (hiddenUrls.has(hp.url)) hiddenUrls.delete(hp.url);
+        else { hiddenUrls.add(hp.url); selectedUrls.delete(hp.url); }
+        saveHidden();
+        applyFilters();
+      }
+      break;
+    case 'o':
+      e.preventDefault();
+      if (focusedIndex >= 0 && focusedIndex < filteredProducts.length) {
+        window.open(filteredProducts[focusedIndex].url, '_blank');
+      }
+      break;
+    case 't':
+      e.preventDefault();
+      enterTriage(0);
+      break;
+    case 'Enter':
+      e.preventDefault();
+      if (focusedIndex >= 0) enterTriage(focusedIndex);
+      else enterTriage(0);
+      break;
+    case '/':
+      e.preventDefault();
+      document.getElementById('searchInput').focus();
+      break;
+    case '?':
+      e.preventDefault();
+      kbdHelpVisible = !kbdHelpVisible;
+      document.getElementById('kbdHelp').classList.toggle('visible', kbdHelpVisible);
+      break;
+    case 'Escape':
+      focusedIndex = -1;
+      kbdHelpVisible = false;
+      document.getElementById('kbdHelp').classList.remove('visible');
+      updateFocus();
+      break;
+  }
+});
+
+function updateFocus() {
+  document.querySelectorAll('.focused').forEach(function(el) { el.classList.remove('focused'); });
+  if (focusedIndex < 0) return;
+  var selector = viewMode === 'grid'
+    ? '.product-card[data-idx="' + focusedIndex + '"]'
+    : 'tr[data-idx="' + focusedIndex + '"]';
+  var el = document.querySelector(selector);
+  if (el) {
+    el.classList.add('focused');
+    el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+// ── Drag and drop ──────────────────────────────────────
+var dropZone = document.getElementById('dropZone');
+document.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('active'); });
+document.addEventListener('dragleave', function(e) {
+  if (e.relatedTarget === null) dropZone.classList.remove('active');
+});
+document.addEventListener('drop', function(e) {
+  e.preventDefault();
+  dropZone.classList.remove('active');
+  var file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.json')) {
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        loadData(JSON.parse(ev.target.result));
+      } catch (err) {
+        alert('Failed to parse JSON: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+});
+
+// ── Load data ──────────────────────────────────────────
+function loadData(data) {
+  loadHidden();
+  loadFavorites();
+  loadPreviousSessionUrls();
+
+  if (data.meta) renderMeta(data.meta);
+  allProducts = data.products || [];
+
+  // Sync Cortex feedback state
+  if (allProducts.some(function(p) { return p.cortex_status; })) {
+    allProducts.forEach(function(p) {
+      if (p.cortex_status === 'dismissed') hiddenUrls.add(p.url);
+      else if (p.cortex_status === 'engaged') selectedUrls.add(p.url);
+    });
+    saveHidden();
+  }
+
+  document.getElementById('controls').style.display = 'flex';
+  document.getElementById('discountSlider').value = data.meta?.min_discount_pct || 50;
+  populateFilters();
+  applyFilters();
+
+  // Observe controls height for sticky offset
+  resizeObserver.observe(document.getElementById('controls'));
+  updateStickyOffset();
+
+  // Save current URLs for next-session "new items" detection
+  saveSessionUrls(allProducts.map(function(p) { return p.url; }));
+}
+
+if (EMBEDDED_DATA) {
+  loadData(EMBEDDED_DATA);
+}
+
+})();
+</script>
+</body>
+</html>
