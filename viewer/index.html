@@ -17,8 +17,6 @@
     --yellow: #facc15;
     --orange: #fb923c;
     --red: #f87171;
-    --selected: #1e2a1e;
-    --selected-border: #4ade80;
     --hidden-bg: #1a1418;
     --controls-height: 52px;
   }
@@ -84,17 +82,54 @@
 
   /* Controls */
   .controls {
-    padding: 12px 32px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
     position: sticky;
     top: 0;
     z-index: 100;
   }
+  .controls-bar {
+    padding: 8px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: space-between;
+  }
+  .controls-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .filter-panel {
+    padding: 10px 32px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    max-height: 200px;
+    overflow: hidden;
+    transition: max-height 0.2s ease, padding 0.2s ease, opacity 0.2s ease;
+  }
+  .filter-panel.collapsed {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    border-top-color: transparent;
+  }
+  .filter-toggle-btn {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-toggle-btn:hover { border-color: var(--accent); color: var(--text); }
+  .filter-toggle-btn.has-filters { border-color: var(--accent); color: var(--accent); }
   .controls select, .controls input[type="number"] {
     background: var(--bg);
     border: 1px solid var(--border);
@@ -153,34 +188,41 @@
   .pill:hover { border-color: var(--accent); color: var(--text); }
   .pill.active { background: var(--accent); color: #000; border-color: var(--accent); }
 
-  .sort-group {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
   .count {
     font-size: 13px;
     color: var(--text-muted);
-    padding: 0 8px;
+    padding: 0 4px;
+    white-space: nowrap;
   }
 
-  .toggle-btn {
-    font-size: 12px;
-    color: var(--text-muted);
-    background: transparent;
-    border: 1px solid var(--border);
-    padding: 4px 10px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
+  /* Mode tabs */
+  .mode-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--bg);
+    border-radius: 6px;
+    padding: 2px;
   }
-  .toggle-btn:hover { border-color: var(--accent); color: var(--text); }
-  .toggle-btn.active-hidden { background: var(--hidden-bg); border-color: #555; }
-  .toggle-btn.active-new { background: rgba(74,222,128,0.1); border-color: var(--green); color: var(--green); }
-  .toggle-btn.active-saved { background: rgba(74,222,128,0.15); border-color: var(--green); color: var(--green); }
-  .toggle-btn.active-fav { background: rgba(196,162,101,0.1); border-color: var(--accent); color: var(--accent); }
+  .mode-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .mode-tab:hover { color: var(--text); }
+  .mode-tab.active { background: var(--surface-hover); color: var(--accent); }
+  .mode-tab .tab-count {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-left: 4px;
+  }
+  .mode-tab.active .tab-count { color: var(--accent); }
 
   /* View toggle */
   .view-toggle {
@@ -243,16 +285,6 @@
   .brand-combo-option:hover { background: var(--surface-hover); }
   .brand-combo-option.active { color: var(--accent); }
   .brand-combo-option .opt-count { font-size: 11px; color: var(--text-muted); }
-  .brand-fav-star {
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--text-muted);
-    margin-right: 6px;
-    transition: color 0.15s;
-  }
-  .brand-fav-star:hover { color: var(--accent); }
-  .brand-fav-star.favorited { color: var(--accent); }
-
   /* Table */
   .table-wrap { padding: 0 32px 100px; }
   table {
@@ -288,7 +320,8 @@
   }
   tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
   tbody tr:hover { background: var(--surface-hover); }
-  tbody tr.selected { background: var(--selected); }
+  tbody tr.saved-row { border-left: 3px solid var(--accent); }
+  tbody tr.saved-row td.save-star { color: var(--accent); }
   tbody tr.focused { outline: 1px solid var(--accent); outline-offset: -1px; }
   tbody tr.hidden-row {
     opacity: 0.5;
@@ -312,13 +345,16 @@
   }
 
   td { padding: 10px 12px; vertical-align: middle; }
-  td.cb { width: 36px; text-align: center; }
-  td.cb input[type="checkbox"] {
-    width: 15px;
-    height: 15px;
-    accent-color: var(--green);
+  td.save-star {
+    width: 36px;
+    text-align: center;
+    font-size: 16px;
+    color: var(--text-muted);
     cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
   }
+  td.save-star:hover { color: var(--accent); }
   td.thumb { width: 48px; padding: 4px 8px; }
   td.thumb img {
     width: 44px;
@@ -350,7 +386,6 @@
     color: var(--text-muted);
     white-space: nowrap;
   }
-  td.brand .fav-indicator { color: var(--accent); margin-right: 2px; }
   td.name a {
     color: var(--text);
     text-decoration: none;
@@ -406,6 +441,17 @@
   .btn-hide:hover { color: var(--red); background: rgba(248,113,113,0.1); }
   .btn-unhide { color: var(--green); }
   .btn-unhide:hover { color: var(--green); background: rgba(74,222,128,0.1); }
+  .btn-unsave {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .btn-unsave:hover { color: var(--red); background: rgba(248,113,113,0.1); }
   .hidden-label {
     font-size: 9px;
     font-weight: 600;
@@ -413,50 +459,6 @@
     letter-spacing: 0.5px;
     margin-left: 4px;
   }
-
-  /* Floating action bar */
-  .action-bar {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--surface);
-    border: 1px solid var(--selected-border);
-    border-radius: 12px;
-    padding: 12px 20px;
-    display: none;
-    align-items: center;
-    gap: 16px;
-    z-index: 200;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-  }
-  .action-bar.visible { display: flex; }
-  .action-bar .count-text {
-    font-size: 14px;
-    font-weight: 500;
-    white-space: nowrap;
-  }
-  .action-bar button {
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: none;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .btn-open { background: var(--green); color: #000; }
-  .btn-open:hover { opacity: 0.85; }
-  .btn-copy-urls { background: var(--accent); color: #000; }
-  .btn-copy-urls:hover { opacity: 0.85; }
-  .btn-select-all {
-    background: transparent;
-    border: 1px solid var(--border) !important;
-    color: var(--text);
-  }
-  .btn-select-all:hover { border-color: var(--accent) !important; }
-  .btn-clear { background: transparent; color: var(--text-muted); }
-  .btn-clear:hover { color: var(--text); }
 
   /* Back to top */
   .back-to-top {
@@ -484,7 +486,7 @@
   .grid-wrap {
     padding: 16px 32px 100px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 16px;
   }
   .product-card {
@@ -497,7 +499,8 @@
     position: relative;
   }
   .product-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-  .product-card.selected { border-color: var(--selected-border); background: var(--selected); }
+  .product-card.saved-card { border-color: var(--accent); }
+  .product-card.saved-card .card-save-star { color: var(--accent); }
   .product-card.hidden-card { opacity: 0.4; }
   .product-card.focused { outline: 2px solid var(--accent); outline-offset: -2px; }
   .product-card .card-img {
@@ -565,19 +568,21 @@
     top: 8px;
     left: 8px;
   }
-  .product-card .card-cb {
+  .card-save-star {
     position: absolute;
     top: 8px;
     left: 8px;
-    width: 18px;
-    height: 18px;
-    accent-color: var(--green);
+    font-size: 18px;
+    color: var(--text-muted);
     cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.15s;
+    opacity: 0.3;
+    transition: opacity 0.15s, color 0.15s;
+    z-index: 5;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
   }
-  .product-card:hover .card-cb,
-  .product-card.selected .card-cb { opacity: 1; }
+  .card-save-star:hover { color: var(--accent); }
+  .product-card:hover .card-save-star,
+  .product-card.saved-card .card-save-star { opacity: 1; }
   .product-card .card-actions {
     position: absolute;
     bottom: 52px;
@@ -614,13 +619,18 @@
   }
 
   @media (max-width: 768px) {
-    .header, .controls { padding-left: 16px; padding-right: 16px; }
+    .header { padding-left: 16px; padding-right: 16px; }
+    .controls-bar { padding-left: 16px; padding-right: 16px; flex-wrap: wrap; }
+    .filter-panel { padding-left: 16px; padding-right: 16px; }
+    .filter-panel.collapsed { padding-left: 16px; padding-right: 16px; }
     .table-wrap { padding: 0 8px 100px; }
-    .grid-wrap { padding: 8px 8px 100px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-    .controls { gap: 8px; }
-    .sort-group { margin-left: 0; width: 100%; }
+    .grid-wrap { padding: 8px 8px 100px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+    .controls-right { flex-wrap: wrap; }
+    .mode-tabs { width: 100%; }
+    .mode-tab { flex: 1; text-align: center; }
     td.category, th.cat-col { display: none; }
     .search-input { width: 100%; }
+    .card-save-star { opacity: 0.5; }
   }
 
   /* Triage mode */
@@ -638,12 +648,13 @@
 
   .triage-card {
     position: relative;
-    max-width: 680px;
+    max-width: 560px;
     width: 90vw;
+    max-height: 92vh;
+    overflow-y: auto;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
-    overflow: hidden;
     animation: triageSlideIn 0.15s ease-out;
   }
 
@@ -671,9 +682,25 @@
 
   .triage-img-wrap {
     position: relative;
-    aspect-ratio: 3/4;
+    width: 100%;
+    height: 65vh;
     overflow: hidden;
     background: var(--bg);
+    cursor: zoom-in;
+  }
+  .triage-img-wrap.zoomed {
+    position: fixed;
+    inset: 0;
+    z-index: 600;
+    height: 100vh;
+    width: 100vw;
+    cursor: zoom-out;
+  }
+  .triage-img-wrap.zoomed .triage-img-bg { display: none; }
+  .triage-img-wrap.zoomed .triage-img-fg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
   .triage-img-bg {
     position: absolute;
@@ -723,7 +750,6 @@
     color: var(--text-muted);
     margin-bottom: 4px;
   }
-  .triage-brand .fav-indicator { color: var(--accent); margin-right: 4px; }
   .triage-name {
     font-size: 15px;
     color: var(--text);
@@ -793,6 +819,7 @@
   }
   .triage-flash.flash-save { background: var(--green); animation: triageFlash 0.3s ease-out; }
   .triage-flash.flash-dismiss { background: var(--red); animation: triageFlash 0.3s ease-out; }
+  .triage-flash.flash-undo { background: var(--yellow); animation: triageFlash 0.3s ease-out; }
 
   .triage-summary {
     max-width: 420px;
@@ -855,6 +882,43 @@
     color: var(--text-muted);
   }
 
+  /* Save/dismiss row animations */
+  @keyframes rowSaveFlash {
+    0% { background: rgba(196,162,101,0.2); }
+    100% { background: transparent; }
+  }
+  @keyframes rowDismissOut {
+    0% { opacity: 1; max-height: 60px; }
+    100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
+  }
+  .row-save-flash { animation: rowSaveFlash 0.4s ease-out; }
+  .row-dismiss-out { animation: rowDismissOut 0.25s ease-out forwards; overflow: hidden; }
+  .card-save-flash { animation: rowSaveFlash 0.4s ease-out; }
+  .card-dismiss-out { animation: rowDismissOut 0.25s ease-out forwards; overflow: hidden; }
+
+  /* Saved batch actions bar */
+  .saved-actions {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 32px;
+    background: rgba(196,162,101,0.08);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .saved-actions button {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .saved-actions button:hover { background: rgba(196,162,101,0.15); }
+
   @keyframes triageFlash {
     0% { opacity: 0.25; }
     100% { opacity: 0; }
@@ -864,9 +928,48 @@
     100% { opacity: 1; transform: translateY(0); }
   }
 
+  /* Triage touch action buttons */
+  .triage-touch-actions {
+    display: none;
+    justify-content: center;
+    gap: 16px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .triage-btn {
+    padding: 10px 20px;
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    min-width: 80px;
+    min-height: 44px;
+    transition: all 0.15s;
+  }
+  .triage-btn-save { color: var(--green); border-color: var(--green); }
+  .triage-btn-save:hover { background: rgba(74,222,128,0.15); }
+  .triage-btn-dismiss { color: var(--red); border-color: var(--red); }
+  .triage-btn-dismiss:hover { background: rgba(248,113,113,0.15); }
+  .triage-btn-open { color: var(--accent); border-color: var(--accent); }
+  .triage-btn-open:hover { background: rgba(196,162,101,0.15); }
+  .triage-btn-undo { color: var(--yellow); border-color: var(--yellow); }
+  .triage-btn-undo:hover { background: rgba(250,204,21,0.15); }
+  .triage-btn-neutral { color: var(--text-muted); border-color: var(--border); }
+  .triage-btn-neutral:hover { color: var(--text); border-color: var(--text-muted); }
+
   @media (max-width: 768px) {
-    .triage-card { width: 100vw; max-width: 100vw; border-radius: 0; }
+    .triage-card { width: 100vw; max-width: 100vw; max-height: 100vh; border-radius: 0; }
+    .triage-card .triage-img-wrap { height: 55vh; }
     .triage-summary { width: 100vw; max-width: 100vw; border-radius: 0; }
+    .triage-actions { display: none; }
+    .triage-touch-actions { display: flex; }
+    .filter-panel:not(.collapsed) { max-height: 500px; }
+    .filter-toggle-btn { display: inline-block; }
+  }
+  @media (min-width: 769px) {
+    .triage-touch-actions { display: none; }
   }
 </style>
 </head>
@@ -882,52 +985,64 @@
 </div>
 
 <div class="controls" id="controls" style="display:none">
-  <div class="filter-group">
-    <label>Search</label>
-    <input type="text" class="search-input" id="searchInput" placeholder="Brand or product...">
-  </div>
-  <div class="filter-group">
-    <label>Store</label>
-    <div class="category-pills" id="storePills"></div>
-  </div>
-  <div class="filter-group">
-    <label>Brand</label>
-    <div class="brand-combo" id="brandCombo">
-      <input type="text" class="brand-combo-input" id="brandInput" placeholder="All Brands" autocomplete="off">
-      <div class="brand-combo-dropdown" id="brandDropdown"></div>
+  <div class="controls-bar">
+    <div class="mode-tabs" id="modeTabs">
+      <button class="mode-tab active" data-mode="all">All</button>
+      <button class="mode-tab" data-mode="new">New</button>
+      <button class="mode-tab" data-mode="saved">Saved</button>
+      <button class="mode-tab" data-mode="hidden">Hidden</button>
+    </div>
+    <div class="controls-right">
+      <div class="count" id="resultCount"></div>
+      <button class="filter-toggle-btn" id="filterToggle" title="Toggle filters">Filters</button>
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="table" title="Table view">&#9776;</button>
+        <button class="view-btn" data-view="grid" title="Grid view">&#9638;</button>
+      </div>
+      <label>Sort</label>
+      <select id="sortSelect">
+        <option value="discount">Discount %</option>
+        <option value="price-asc">Price: Low &rarr; High</option>
+        <option value="price-desc">Price: High &rarr; Low</option>
+        <option value="brand">Brand A-Z</option>
+      </select>
     </div>
   </div>
-  <div class="filter-group">
-    <label>Min Discount</label>
-    <input type="range" id="discountSlider" min="0" max="90" step="5" value="50">
-    <span id="discountValue" style="font-size:12px;color:var(--text-muted)">50%</span>
-  </div>
-  <div class="filter-group">
-    <label>Max Price</label>
-    <input type="number" id="maxPrice" placeholder="No limit" min="0" step="50">
-  </div>
-  <div class="filter-group">
-    <label>Category</label>
-    <div class="category-pills" id="categoryPills"></div>
-  </div>
-  <div class="sort-group">
-    <button class="toggle-btn" id="favToggle" title="Show favorites only">&#9733; Favs</button>
-    <button class="toggle-btn" id="savedToggle">Saved (0)</button>
-    <button class="toggle-btn" id="allToggle">All Items (0)</button>
-    <button class="toggle-btn" id="hiddenToggle">Hidden (0)</button>
-    <div class="view-toggle">
-      <button class="view-btn active" data-view="table" title="Table view">&#9776;</button>
-      <button class="view-btn" data-view="grid" title="Grid view">&#9638;</button>
+  <div class="filter-panel" id="filterPanel">
+    <div class="filter-group">
+      <label>Search</label>
+      <input type="text" class="search-input" id="searchInput" placeholder="Brand or product...">
     </div>
-    <label>Sort</label>
-    <select id="sortSelect">
-      <option value="discount">Discount %</option>
-      <option value="price-asc">Price: Low &rarr; High</option>
-      <option value="price-desc">Price: High &rarr; Low</option>
-      <option value="brand">Brand A-Z</option>
-    </select>
+    <div class="filter-group">
+      <label>Store</label>
+      <div class="category-pills" id="storePills"></div>
+    </div>
+    <div class="filter-group">
+      <label>Brand</label>
+      <div class="brand-combo" id="brandCombo">
+        <input type="text" class="brand-combo-input" id="brandInput" placeholder="All Brands" autocomplete="off">
+        <div class="brand-combo-dropdown" id="brandDropdown"></div>
+      </div>
+    </div>
+    <div class="filter-group">
+      <label>Min Discount</label>
+      <input type="range" id="discountSlider" min="0" max="90" step="5" value="50">
+      <span id="discountValue" style="font-size:12px;color:var(--text-muted)">50%</span>
+    </div>
+    <div class="filter-group">
+      <label>Max Price</label>
+      <input type="number" id="maxPrice" placeholder="No limit" min="0" step="50">
+    </div>
+    <div class="filter-group">
+      <label>Category</label>
+      <div class="category-pills" id="categoryPills"></div>
+    </div>
   </div>
-  <div class="count" id="resultCount"></div>
+</div>
+
+<div class="saved-actions" id="savedActions" style="display:none">
+  <span id="savedActionsLabel">0 saved items</span>
+  <button id="openAllSaved">Open all in tabs</button>
 </div>
 
 <div id="content">
@@ -937,27 +1052,23 @@
   </div>
 </div>
 
-<div class="action-bar" id="actionBar">
-  <span class="count-text" id="selectedCount">0 selected</span>
-  <button class="btn-select-all" id="btnSelectAll">Select All Visible</button>
-  <button class="btn-copy-urls" id="btnCopyUrls">Copy URLs</button>
-  <button class="btn-open" id="btnOpen">Open All</button>
-  <button class="btn-clear" id="btnClear">Clear</button>
-</div>
 
 <button class="back-to-top" id="backToTop" title="Back to top">&#8593;</button>
 
 <div class="kbd-help" id="kbdHelp">
   <strong style="color:var(--text)">Keyboard Shortcuts</strong><br>
   <kbd>j</kbd> / <kbd>k</kbd> &mdash; Navigate rows<br>
-  <kbd>x</kbd> &mdash; Select / deselect<br>
+  <kbd>x</kbd> &mdash; Save / unsave<br>
   <kbd>h</kbd> &mdash; Hide / unhide<br>
   <kbd>o</kbd> &mdash; Open in new tab<br>
   <kbd>t</kbd> &mdash; Start triage mode<br>
   <kbd>Enter</kbd> &mdash; Triage focused item<br>
   <kbd>?</kbd> &mdash; Toggle this help<br>
   <kbd>/</kbd> &mdash; Focus search<br>
-  <kbd>Esc</kbd> &mdash; Clear focus / exit triage
+  <kbd>Esc</kbd> &mdash; Clear focus / exit triage<br>
+  <strong style="color:var(--text);margin-top:4px;display:inline-block">In Triage</strong><br>
+  <kbd>s</kbd> save &nbsp; <kbd>d</kbd> dismiss &nbsp; <kbd>z</kbd> undo<br>
+  <kbd>o</kbd> open &nbsp; <kbd>Esc</kbd> exit &nbsp; Click image to zoom
 </div>
 
 <div class="triage-overlay" id="triageOverlay">
@@ -974,7 +1085,14 @@
       <kbd>s</kbd> save &nbsp;
       <kbd>d</kbd> dismiss &nbsp;
       <kbd>o</kbd> open &nbsp;
+      <kbd>z</kbd> undo &nbsp;
       <kbd>Esc</kbd> exit
+    </div>
+    <div class="triage-touch-actions">
+      <button class="triage-btn triage-btn-dismiss" data-triage-action="dismiss">Dismiss</button>
+      <button class="triage-btn triage-btn-undo" data-triage-action="undo">Undo</button>
+      <button class="triage-btn triage-btn-open" data-triage-action="open">Open</button>
+      <button class="triage-btn triage-btn-save" data-triage-action="save">Save</button>
     </div>
     <div class="triage-stats" id="triageStats"></div>
     <div class="triage-flash" id="triageFlash"></div>
@@ -993,11 +1111,8 @@ let allProducts = [];
 let filteredProducts = [];
 let selectedUrls = new Set();
 let hiddenUrls = new Set();
-let favoriteBrands = new Set();
 let previousSessionUrls = new Set();
-let showHidden = false;
-let showSavedOnly = false;
-let showFavsOnly = false;
+let activeMode = 'all'; // 'all' | 'new' | 'saved' | 'hidden'
 let activeCategory = '';
 let activeStore = '';
 let activeBrand = '';
@@ -1005,12 +1120,14 @@ let searchQuery = '';
 let viewMode = 'table';
 let focusedIndex = -1;
 let kbdHelpVisible = false;
+let filterPanelOpen = true;
 
 // Triage mode state
 let triageActive = false;
 let triageIndex = 0;
 let triageQueue = [];
 let triageStats = { saved: 0, dismissed: 0, opened: 0, skipped: 0 };
+let triageHistory = [];
 
 // ── Utilities ──────────────────────────────────────────
 function debounce(fn, ms) {
@@ -1049,13 +1166,13 @@ function loadHidden() {
     if (s) hiddenUrls = new Set(JSON.parse(s));
   } catch {}
 }
-function saveFavorites() {
-  try { localStorage.setItem('sale-monitor-favorites', JSON.stringify([...favoriteBrands])); } catch {}
+function saveSaved() {
+  try { localStorage.setItem('sale-monitor-saved', JSON.stringify([...selectedUrls])); } catch {}
 }
-function loadFavorites() {
+function loadSaved() {
   try {
-    const s = localStorage.getItem('sale-monitor-favorites');
-    if (s) favoriteBrands = new Set(JSON.parse(s));
+    const s = localStorage.getItem('sale-monitor-saved');
+    if (s) selectedUrls = new Set(JSON.parse(s));
   } catch {}
 }
 function saveSessionUrls(urls) {
@@ -1073,6 +1190,25 @@ function loadPreviousSessionUrls() {
 }
 function isNewItem(url) {
   return previousSessionUrls.size > 0 && !previousSessionUrls.has(url);
+}
+function saveTriageProgress() {
+  try {
+    localStorage.setItem('sale-monitor-triage-progress', JSON.stringify({
+      index: triageIndex,
+      queueUrls: triageQueue.map(function(p) { return p.url; }),
+      stats: triageStats,
+      timestamp: Date.now()
+    }));
+  } catch {}
+}
+function loadTriageProgress() {
+  try {
+    var s = localStorage.getItem('sale-monitor-triage-progress');
+    return s ? JSON.parse(s) : null;
+  } catch { return null; }
+}
+function clearTriageProgress() {
+  try { localStorage.removeItem('sale-monitor-triage-progress'); } catch {}
 }
 
 // ── Dynamic sticky offset ─────────────────────────────
@@ -1160,21 +1296,14 @@ function populateBrandDropdown(filter) {
   const lower = (filter || '').toLowerCase();
   const brands = Object.keys(brandCounts)
     .filter(b => !filter || b.toLowerCase().includes(lower))
-    .sort((a, b) => {
-      const af = favoriteBrands.has(a) ? 0 : 1;
-      const bf = favoriteBrands.has(b) ? 0 : 1;
-      return af !== bf ? af - bf : a.localeCompare(b);
-    });
+    .sort((a, b) => a.localeCompare(b));
 
   const dd = document.getElementById('brandDropdown');
   let html = '<div class="brand-combo-option' + (!activeBrand ? ' active' : '') +
     '" data-brand=""><span>All Brands</span><span class="opt-count">' + allProducts.length + '</span></div>';
   brands.forEach(b => {
-    const fav = favoriteBrands.has(b);
     html += '<div class="brand-combo-option' + (activeBrand === b ? ' active' : '') +
       '" data-brand="' + esc(b) + '"><span>' +
-      '<span class="brand-fav-star' + (fav ? ' favorited' : '') +
-      '" data-fav-brand="' + esc(b) + '">' + (fav ? '\u2605' : '\u2606') + '</span>' +
       esc(b) + '</span><span class="opt-count">' + brandCounts[b] + '</span></div>';
   });
   dd.innerHTML = html;
@@ -1187,14 +1316,17 @@ function applyFilters() {
   document.getElementById('discountValue').textContent = minDiscount + '%';
 
   filteredProducts = allProducts.filter(p => {
+    // Mode filters
+    if (activeMode === 'all' && hiddenUrls.has(p.url)) return false;
+    if (activeMode === 'saved' && !selectedUrls.has(p.url)) return false;
+    if (activeMode === 'hidden' && !hiddenUrls.has(p.url)) return false;
+    if (activeMode === 'new' && !isNewItem(p.url)) return false;
+    // Standard filters
     if (activeStore && p.retailer !== activeStore) return false;
     if (activeBrand && p.brand !== activeBrand) return false;
     if (p.retailer_type !== 'secondhand' && p.discount_pct < minDiscount) return false;
     if (p.sale_price > maxPrice) return false;
     if (activeCategory && p.category !== activeCategory) return false;
-    if (hiddenUrls.has(p.url) && !showHidden) return false;
-    if (showSavedOnly && !selectedUrls.has(p.url)) return false;
-    if (showFavsOnly && !favoriteBrands.has(p.brand)) return false;
     if (searchQuery) {
       const hay = (p.brand + ' ' + p.name).toLowerCase();
       if (!hay.includes(searchQuery.toLowerCase())) return false;
@@ -1205,17 +1337,29 @@ function applyFilters() {
   sortProducts();
   focusedIndex = -1;
   if (viewMode === 'grid') renderGrid(); else renderTable();
-  updateHiddenCount();
-  updateSavedCount();
+  updateModeTabs();
   updateStickyOffset();
+
+  // Show/hide saved batch actions
+  var savedActions = document.getElementById('savedActions');
+  if (savedActions) {
+    var showActions = activeMode === 'saved' && selectedUrls.size > 0;
+    savedActions.style.display = showActions ? 'flex' : 'none';
+    if (showActions) {
+      document.getElementById('savedActionsLabel').textContent = filteredProducts.length + ' saved item' + (filteredProducts.length !== 1 ? 's' : '');
+    }
+  }
 }
 
 function sortProducts() {
   const sort = document.getElementById('sortSelect').value;
   filteredProducts.sort((a, b) => {
-    const aH = hiddenUrls.has(a.url) ? 1 : 0;
-    const bH = hiddenUrls.has(b.url) ? 1 : 0;
-    if (aH !== bH) return aH - bH;
+    // Only push hidden to bottom in 'all' mode (where they won't appear anyway)
+    if (activeMode !== 'hidden') {
+      const aH = hiddenUrls.has(a.url) ? 1 : 0;
+      const bH = hiddenUrls.has(b.url) ? 1 : 0;
+      if (aH !== bH) return aH - bH;
+    }
     const aN = isNewItem(a.url) ? 0 : 1;
     const bN = isNewItem(b.url) ? 0 : 1;
     if (aN !== bN) return aN - bN;
@@ -1232,8 +1376,7 @@ function sortProducts() {
 // ── Render table ───────────────────────────────────────
 function renderTable() {
   const content = document.getElementById('content');
-  const visibleCount = filteredProducts.filter(p => !hiddenUrls.has(p.url)).length;
-  document.getElementById('resultCount').textContent = visibleCount + ' deals';
+  document.getElementById('resultCount').textContent = filteredProducts.length + ' deals';
 
   if (filteredProducts.length === 0) {
     content.innerHTML = '<div class="empty-state"><h2>No Matching Deals</h2><p>Try adjusting your filters.</p></div>';
@@ -1257,7 +1400,7 @@ function renderTable() {
   ];
 
   let html = '<div class="table-wrap"><table><thead><tr>';
-  html += '<th><input type="checkbox" id="selectAllCb" title="Select all visible"></th>';
+  html += '<th></th>';
   html += '<th></th>';
   cols.forEach(col => {
     const sorted = col.field && col.field === activeField;
@@ -1278,14 +1421,14 @@ function renderTable() {
     const isNew = isNewItem(p.url);
     const focused = idx === focusedIndex;
     const cls = [
-      sel ? 'selected' : '',
+      sel ? 'saved-row' : '',
       hidden ? 'hidden-row' : '',
       engaged ? 'cortex-engaged' : '',
       focused ? 'focused' : ''
     ].filter(Boolean).join(' ');
 
     html += '<tr' + (cls ? ' class="' + cls + '"' : '') + ' data-url="' + esc(p.url) + '" data-idx="' + idx + '">';
-    html += '<td class="cb"><input type="checkbox"' + (sel ? ' checked' : '') + ' data-url="' + esc(p.url) + '"></td>';
+    html += '<td class="save-star" data-action="toggle-save" data-url="' + esc(p.url) + '">' + (sel ? '\u2605' : '\u2606') + '</td>';
     html += '<td class="thumb">';
     if (p.image_url) {
       html += '<a href="' + esc(p.url) + '" target="_blank" rel="noopener"><img src="' + esc(p.image_url) + '" loading="lazy" alt=""></a>';
@@ -1294,7 +1437,7 @@ function renderTable() {
     }
     html += '</td>';
     html += '<td class="store">' + esc(p.retailer || '') + '</td>';
-    html += '<td class="brand">' + (favoriteBrands.has(p.brand) ? '<span class="fav-indicator">\u2605</span>' : '') + esc(p.brand) + '</td>';
+    html += '<td class="brand">' + esc(p.brand) + '</td>';
     html += '<td class="name"><a href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(p.name) + '</a>' + (isNew ? '<span class="new-badge">NEW</span>' : '') + '</td>';
     const isFullPrice = p.discount_pct === 0;
     const jpySale = p.sale_price_jpy ? '<span class="jpy-note">\u00a5' + p.sale_price_jpy.toLocaleString() + '</span>' : '';
@@ -1309,6 +1452,7 @@ function renderTable() {
     html += '<td class="discount"><span class="discount-badge ' + discountClass(p.discount_pct) + '">' + discLabel + '</span></td>';
     html += '<td class="category cat-col">' + p.category + '</td>';
     html += '<td class="actions">' +
+      (sel ? '<button class="btn-unsave" data-action="unsave" data-url="' + esc(p.url) + '">unsave</button>' : '') +
       (hidden ? '<span class="hidden-label">HIDDEN</span>' : '') +
       '<button class="btn-hide' + (hidden ? ' btn-unhide' : '') + '" data-action="hide" data-url="' + esc(p.url) + '">' + (hidden ? 'show' : 'hide') + '</button></td>';
     html += '</tr>';
@@ -1316,15 +1460,13 @@ function renderTable() {
 
   html += '</tbody></table></div>';
   content.innerHTML = html;
-  updateSelectAllCb();
-  updateActionBar();
+
 }
 
 // ── Render grid ────────────────────────────────────────
 function renderGrid() {
   const content = document.getElementById('content');
-  const visibleCount = filteredProducts.filter(p => !hiddenUrls.has(p.url)).length;
-  document.getElementById('resultCount').textContent = visibleCount + ' deals';
+  document.getElementById('resultCount').textContent = filteredProducts.length + ' deals';
 
   if (filteredProducts.length === 0) {
     content.innerHTML = '<div class="empty-state"><h2>No Matching Deals</h2><p>Try adjusting your filters.</p></div>';
@@ -1339,13 +1481,13 @@ function renderGrid() {
     const focused = idx === focusedIndex;
     const cls = [
       'product-card',
-      sel ? 'selected' : '',
+      sel ? 'saved-card' : '',
       hidden ? 'hidden-card' : '',
       focused ? 'focused' : ''
     ].filter(Boolean).join(' ');
 
     html += '<div class="' + cls + '" data-url="' + esc(p.url) + '" data-idx="' + idx + '">';
-    html += '<input type="checkbox" class="card-cb"' + (sel ? ' checked' : '') + ' data-url="' + esc(p.url) + '">';
+    html += '<span class="card-save-star" data-action="toggle-save" data-url="' + esc(p.url) + '">' + (sel ? '\u2605' : '\u2606') + '</span>';
     const isFullPrice = p.discount_pct === 0;
     if (isNew) html += '<span class="card-new-badge"><span class="new-badge">NEW</span></span>';
     if (!isFullPrice) {
@@ -1358,32 +1500,56 @@ function renderGrid() {
     }
     html += '<div class="card-body">';
     html += '<div class="card-store">' + esc(p.retailer || '') + '</div>';
-    html += '<div class="card-brand">' + (favoriteBrands.has(p.brand) ? '\u2605 ' : '') + esc(p.brand) + '</div>';
+    html += '<div class="card-brand">' + esc(p.brand) + '</div>';
     html += '<div class="card-name">' + esc(p.name) + '</div>';
     html += '<div class="card-prices"><span class="card-sale' + (isFullPrice ? ' price-no-discount' : '') + '">' + formatPrice(p.sale_price, p.currency) + '</span>';
     if (!isFullPrice) html += '<span class="card-orig">' + formatPrice(p.original_price, p.currency) + '</span>';
     html += '</div>';
     html += '</div>';
-    html += '<div class="card-actions"><button class="btn-hide' + (hidden ? ' btn-unhide' : '') + '" data-action="hide" data-url="' + esc(p.url) + '">' + (hidden ? 'show' : 'hide') + '</button></div>';
+    html += '<div class="card-actions">' +
+      (sel ? '<button class="btn-unsave" data-action="unsave" data-url="' + esc(p.url) + '">unsave</button>' : '') +
+      '<button class="btn-hide' + (hidden ? ' btn-unhide' : '') + '" data-action="hide" data-url="' + esc(p.url) + '">' + (hidden ? 'show' : 'hide') + '</button></div>';
     html += '</div>';
   });
   html += '</div>';
   content.innerHTML = html;
-  updateActionBar();
+
 }
 
 // ── Event delegation on #content ───────────────────────
 document.getElementById('content').addEventListener('click', function(e) {
   var target = e.target;
 
+  // Unsave button
+  if (target.dataset && target.dataset.action === 'unsave') {
+    e.stopPropagation();
+    selectedUrls.delete(target.dataset.url);
+    saveSaved();
+    applyFilters();
+    return;
+  }
+
   // Hide/show button
   if (target.dataset && target.dataset.action === 'hide') {
     e.stopPropagation();
     var url = target.dataset.url;
-    if (hiddenUrls.has(url)) hiddenUrls.delete(url);
-    else { hiddenUrls.add(url); selectedUrls.delete(url); }
-    saveHidden();
-    applyFilters();
+    var row = target.closest('tr[data-url]') || target.closest('.product-card[data-url]');
+    if (hiddenUrls.has(url)) {
+      hiddenUrls.delete(url);
+      saveHidden();
+      applyFilters();
+    } else {
+      hiddenUrls.add(url);
+      // Don't remove saved state — items can be both saved and hidden
+      saveHidden();
+      if (row && !row.classList.contains('row-dismiss-out') && !row.classList.contains('card-dismiss-out')) {
+        var animClass = row.tagName === 'TR' ? 'row-dismiss-out' : 'card-dismiss-out';
+        row.classList.add(animClass);
+        setTimeout(function() { applyFilters(); }, 250);
+      } else {
+        applyFilters();
+      }
+    }
     return;
   }
 
@@ -1401,141 +1567,68 @@ document.getElementById('content').addEventListener('click', function(e) {
     return;
   }
 
-  // Checkbox
-  if (target.type === 'checkbox' && target.dataset.url) {
+  // Star toggle (save/unsave)
+  if (target.dataset && target.dataset.action === 'toggle-save') {
     e.stopPropagation();
-    var cbUrl = target.dataset.url;
-    if (target.checked) selectedUrls.add(cbUrl); else selectedUrls.delete(cbUrl);
-    var row = target.closest('tr') || target.closest('.product-card');
-    if (row) row.classList.toggle('selected', target.checked);
-    updateActionBar();
-    updateSelectAllCb();
+    var starUrl = target.dataset.url;
+    var starRow = target.closest('tr[data-url]') || target.closest('.product-card[data-url]');
+    if (selectedUrls.has(starUrl)) {
+      selectedUrls.delete(starUrl);
+    } else {
+      selectedUrls.add(starUrl);
+      if (starRow) {
+        var flashClass = starRow.tagName === 'TR' ? 'row-save-flash' : 'card-save-flash';
+        starRow.classList.add(flashClass);
+        setTimeout(function() { starRow.classList.remove(flashClass); }, 400);
+      }
+    }
+    saveSaved();
+    applyFilters();
     return;
   }
 
-  // Select-all checkbox
-  if (target.id === 'selectAllCb') {
-    var visible = filteredProducts.filter(function(p) { return !hiddenUrls.has(p.url); });
-    if (target.checked) visible.forEach(function(p) { selectedUrls.add(p.url); });
-    else visible.forEach(function(p) { selectedUrls.delete(p.url); });
-    if (viewMode === 'grid') renderGrid(); else renderTable();
-    return;
-  }
-
-  // Don't toggle on links, buttons, inputs, or images inside links
-  if (target.tagName === 'A' || target.tagName === 'BUTTON' || target.tagName === 'INPUT') return;
-  if (target.tagName === 'IMG' && target.closest('a')) return;
-
-  // Row/card click toggles selection
+  // Focus row/card on click (no selection toggle)
   var item = target.closest('tr[data-url]') || target.closest('.product-card[data-url]');
-  if (item) {
-    var itemUrl = item.dataset.url;
-    var isSel = selectedUrls.has(itemUrl);
-    if (isSel) selectedUrls.delete(itemUrl); else selectedUrls.add(itemUrl);
-    item.classList.toggle('selected', !isSel);
-    var cb = item.querySelector('input[type="checkbox"]');
-    if (cb) cb.checked = !isSel;
-    if (item.dataset.idx !== undefined) focusedIndex = parseInt(item.dataset.idx);
-    updateActionBar();
-    updateSelectAllCb();
+  if (item && item.dataset.idx !== undefined) {
+    focusedIndex = parseInt(item.dataset.idx);
+    updateFocus();
   }
 });
 
-function updateSelectAllCb() {
-  var cb = document.getElementById('selectAllCb');
-  if (!cb) return;
-  var visible = filteredProducts.filter(function(p) { return !hiddenUrls.has(p.url); });
-  cb.checked = visible.length > 0 && visible.every(function(p) { return selectedUrls.has(p.url); });
-}
-
-function updateActionBar() {
-  var bar = document.getElementById('actionBar');
-  var n = selectedUrls.size;
-  if (n > 0) {
-    bar.classList.add('visible');
-    document.getElementById('selectedCount').textContent = n + ' selected';
-  } else {
-    bar.classList.remove('visible');
-  }
-  updateSavedCount();
-}
-
-function updateHiddenCount() {
-  var btn = document.getElementById('hiddenToggle');
-  var total = allProducts.filter(function(p) { return hiddenUrls.has(p.url); }).length;
-  var filtered = allProducts.filter(function(p) {
-    if (!hiddenUrls.has(p.url)) return false;
-    if (activeStore && p.retailer !== activeStore) return false;
-    if (activeBrand && p.brand !== activeBrand) return false;
-    if (activeCategory && p.category !== activeCategory) return false;
-    return true;
+function updateModeTabs() {
+  var tabs = document.querySelectorAll('.mode-tab');
+  var newCount = allProducts.filter(function(p) { return isNewItem(p.url) && !hiddenUrls.has(p.url); }).length;
+  var savedCount = selectedUrls.size;
+  var hiddenCount = allProducts.filter(function(p) { return hiddenUrls.has(p.url); }).length;
+  var unseenCount = allProducts.filter(function(p) {
+    return !selectedUrls.has(p.url) && !hiddenUrls.has(p.url);
   }).length;
-  var label = (filtered === total) ? total : filtered + '/' + total;
-  btn.textContent = showHidden ? 'Hide Hidden (' + label + ')' : 'Show Hidden (' + label + ')';
-  btn.classList.toggle('active-hidden', showHidden);
-}
 
-function updateNewCount() {
-  var btn = document.getElementById('newToggle');
-  var count = allProducts.filter(function(p) { return isNewItem(p.url); }).length;
-  btn.textContent = showNewOnly ? 'All Items' : 'New (' + count + ')';
-  btn.classList.toggle('active-new', showNewOnly);
-}
-
-function updateSavedCount() {
-  var btn = document.getElementById('savedToggle');
-  var count = selectedUrls.size;
-  btn.textContent = 'Saved (' + count + ')';
-  btn.classList.toggle('active-saved', showSavedOnly);
-}
-
-// ── Action bar buttons ─────────────────────────────────
-document.getElementById('btnOpen').addEventListener('click', function() {
-  var urls = [...selectedUrls];
-  if (urls.length > 10) {
-    if (!confirm('Open ' + urls.length + ' tabs?')) return;
-  }
-  urls.forEach(function(url) { window.open(url, '_blank'); });
-});
-
-document.getElementById('btnCopyUrls').addEventListener('click', function() {
-  var text = [...selectedUrls].join('\n');
-  navigator.clipboard.writeText(text).then(function() {
-    var btn = document.getElementById('btnCopyUrls');
-    btn.textContent = 'Copied!';
-    setTimeout(function() { btn.textContent = 'Copy URLs'; }, 1500);
+  tabs.forEach(function(tab) {
+    var mode = tab.dataset.mode;
+    tab.classList.toggle('active', mode === activeMode);
+    switch (mode) {
+      case 'all':
+        tab.innerHTML = 'All' + (unseenCount > 0 ? '<span class="tab-count">' + unseenCount + ' unseen</span>' : '');
+        break;
+      case 'new':
+        tab.innerHTML = 'New' + (newCount > 0 ? '<span class="tab-count">' + newCount + '</span>' : '<span class="tab-count">0</span>');
+        break;
+      case 'saved':
+        tab.innerHTML = '\u2605 Saved' + '<span class="tab-count">' + savedCount + '</span>';
+        break;
+      case 'hidden':
+        tab.innerHTML = 'Hidden' + '<span class="tab-count">' + hiddenCount + '</span>';
+        break;
+    }
   });
-});
+}
 
-document.getElementById('btnSelectAll').addEventListener('click', function() {
-  filteredProducts.filter(function(p) { return !hiddenUrls.has(p.url); })
-    .forEach(function(p) { selectedUrls.add(p.url); });
-  if (viewMode === 'grid') renderGrid(); else renderTable();
-});
-
-document.getElementById('btnClear').addEventListener('click', function() {
-  selectedUrls.clear();
-  if (viewMode === 'grid') renderGrid(); else renderTable();
-});
-
-document.getElementById('hiddenToggle').addEventListener('click', function() {
-  showHidden = !showHidden;
-  applyFilters();
-});
-
-document.getElementById('newToggle').addEventListener('click', function() {
-  showNewOnly = !showNewOnly;
-  applyFilters();
-});
-
-document.getElementById('savedToggle').addEventListener('click', function() {
-  showSavedOnly = !showSavedOnly;
-  applyFilters();
-});
-
-document.getElementById('favToggle').addEventListener('click', function() {
-  showFavsOnly = !showFavsOnly;
-  document.getElementById('favToggle').classList.toggle('active-fav', showFavsOnly);
+// ── Mode tab clicks ────────────────────────────────────
+document.getElementById('modeTabs').addEventListener('click', function(e) {
+  var tab = e.target.closest('.mode-tab');
+  if (!tab) return;
+  activeMode = tab.dataset.mode;
   applyFilters();
 });
 
@@ -1569,18 +1662,6 @@ brandInput.addEventListener('input', function() {
 });
 
 brandDropdown.addEventListener('click', function(e) {
-  // Star click — toggle favorite
-  var star = e.target.closest('.brand-fav-star');
-  if (star) {
-    e.stopPropagation();
-    var brand = star.dataset.favBrand;
-    if (favoriteBrands.has(brand)) favoriteBrands.delete(brand);
-    else favoriteBrands.add(brand);
-    saveFavorites();
-    populateBrandDropdown(brandInput.value);
-    applyFilters();
-    return;
-  }
   // Option click — select brand
   var opt = e.target.closest('.brand-combo-option');
   if (opt) {
@@ -1615,6 +1696,37 @@ document.getElementById('discountSlider').addEventListener('input', function() {
 document.getElementById('maxPrice').addEventListener('input', debouncedApply);
 document.getElementById('sortSelect').addEventListener('change', applyFilters);
 
+// ── Filter panel toggle ────────────────────────────────
+document.getElementById('filterToggle').addEventListener('click', function() {
+  filterPanelOpen = !filterPanelOpen;
+  var panel = document.getElementById('filterPanel');
+  panel.classList.toggle('collapsed', !filterPanelOpen);
+  updateFilterToggleBtn();
+});
+
+function updateFilterToggleBtn() {
+  var btn = document.getElementById('filterToggle');
+  var hasActive = activeStore || activeBrand || activeCategory || searchQuery ||
+    parseInt(document.getElementById('discountSlider').value) !== 50 ||
+    document.getElementById('maxPrice').value;
+  btn.classList.toggle('has-filters', !!hasActive);
+  btn.textContent = filterPanelOpen ? 'Filters' : ('Filters' + (hasActive ? ' \u2022' : ''));
+}
+
+// ── Batch actions ──────────────────────────────────────
+document.getElementById('openAllSaved').addEventListener('click', function() {
+  var savedProducts = filteredProducts.filter(function(p) { return selectedUrls.has(p.url); });
+  var max = Math.min(savedProducts.length, 20);
+  if (savedProducts.length > 20) {
+    if (!confirm('Opening ' + max + ' of ' + savedProducts.length + ' tabs. Continue?')) return;
+  }
+  for (var i = 0; i < max; i++) {
+    (function(url, delay) {
+      setTimeout(function() { window.open(url, '_blank'); }, delay);
+    })(savedProducts[i].url, i * 150);
+  }
+});
+
 // ── Back to top ────────────────────────────────────────
 var backToTopBtn = document.getElementById('backToTop');
 window.addEventListener('scroll', function() {
@@ -1627,11 +1739,32 @@ backToTopBtn.addEventListener('click', function() {
 // ── Triage mode ────────────────────────────────────────
 function enterTriage(startIndex) {
   if (!filteredProducts.length) return;
-  triageQueue = filteredProducts.filter(function(p) {
-    return !selectedUrls.has(p.url) && !hiddenUrls.has(p.url);
-  });
+
+  // Check for saved progress that matches current queue
+  var saved = loadTriageProgress();
+  if (saved && startIndex === 0) {
+    var currentUrls = filteredProducts.map(function(p) { return p.url; }).sort().join('|');
+    var savedUrls = (saved.queueUrls || []).sort().join('|');
+    if (currentUrls === savedUrls && saved.index > 0 && saved.index < filteredProducts.length) {
+      triageQueue = filteredProducts.slice();
+      triageIndex = saved.index;
+      triageStats = saved.stats || { saved: 0, dismissed: 0, opened: 0, skipped: 0 };
+      triageHistory = [];
+      triageActive = true;
+      document.getElementById('triageCard').style.display = '';
+      document.getElementById('triageSummary').style.display = 'none';
+      document.getElementById('triageOverlay').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      renderTriageCard();
+      return;
+    }
+  }
+
+  // Use filteredProducts directly — respects current mode (All/Saved/Hidden/New)
+  triageQueue = filteredProducts.slice();
   triageIndex = Math.max(0, Math.min(startIndex || 0, triageQueue.length - 1));
   triageStats = { saved: 0, dismissed: 0, opened: 0, skipped: 0 };
+  triageHistory = [];
   triageActive = true;
   document.getElementById('triageCard').style.display = '';
   document.getElementById('triageSummary').style.display = 'none';
@@ -1644,6 +1777,9 @@ function exitTriage() {
   triageActive = false;
   document.getElementById('triageOverlay').classList.remove('active');
   document.body.style.overflow = '';
+  // Unzoom image if zoomed
+  document.getElementById('triageImgWrap').classList.remove('zoomed');
+  clearTriageProgress();
   applyFilters();
 }
 
@@ -1678,7 +1814,7 @@ function renderTriageCard() {
   if (isSaved) info += '<span style="color:var(--green);font-size:11px;font-weight:600">SAVED</span>';
   if (isDismissed) info += '<span class="hidden-label">HIDDEN</span>';
   info += '</div>';
-  info += '<div class="triage-brand">' + (favoriteBrands.has(p.brand) ? '<span class="fav-indicator">\u2605</span>' : '') + esc(p.brand) + '</div>';
+  info += '<div class="triage-brand">' + esc(p.brand) + '</div>';
   info += '<div class="triage-name">' + esc(p.name) + '</div>';
   info += '<div class="triage-prices">';
   info += '<span class="triage-sale-price">' + formatPrice(p.sale_price, p.currency) + '</span>';
@@ -1707,37 +1843,57 @@ function renderTriageCard() {
 }
 
 function triageAction(action) {
+  // Handle undo separately
+  if (action === 'undo') { triageUndo(); return; }
+
   if (triageIndex < 0 || triageIndex >= triageQueue.length) return;
   var p = triageQueue[triageIndex];
+
+  // Push undo history for state-changing actions
+  if (action === 'save' || action === 'dismiss' || action === 'next') {
+    triageHistory.push({
+      action: action,
+      url: p.url,
+      index: triageIndex,
+      wasSaved: selectedUrls.has(p.url),
+      wasHidden: hiddenUrls.has(p.url)
+    });
+    if (triageHistory.length > 10) triageHistory.shift();
+  }
 
   switch (action) {
     case 'save':
       selectedUrls.add(p.url);
       hiddenUrls.delete(p.url);
+      saveSaved();
+      saveHidden();
       triageStats.saved++;
       showTriageFlash('save');
       triageIndex++;
+      saveTriageProgress();
       if (triageIndex >= triageQueue.length) { showTriageSummary(); return; }
       renderTriageCard();
       break;
     case 'dismiss':
       hiddenUrls.add(p.url);
-      selectedUrls.delete(p.url);
+      // Don't remove saved state — items can be both saved and hidden
       saveHidden();
       triageStats.dismissed++;
       showTriageFlash('dismiss');
       triageIndex++;
+      saveTriageProgress();
       if (triageIndex >= triageQueue.length) { showTriageSummary(); return; }
       renderTriageCard();
       break;
     case 'open':
       window.open(p.url, '_blank');
       triageStats.opened++;
-      renderTriageCard(); // stay on card, but update stats
+      renderTriageCard();
       break;
     case 'next':
       triageStats.skipped++;
       triageIndex++;
+      saveTriageProgress();
       if (triageIndex >= triageQueue.length) { showTriageSummary(); return; }
       renderTriageCard();
       break;
@@ -1748,6 +1904,26 @@ function triageAction(action) {
       }
       break;
   }
+}
+
+function triageUndo() {
+  if (!triageHistory.length) return;
+  var entry = triageHistory.pop();
+  // Restore saved/hidden state
+  if (entry.wasSaved) selectedUrls.add(entry.url);
+  else selectedUrls.delete(entry.url);
+  if (entry.wasHidden) hiddenUrls.add(entry.url);
+  else hiddenUrls.delete(entry.url);
+  saveSaved(); saveHidden();
+  // Undo stat
+  if (entry.action === 'save') triageStats.saved = Math.max(0, triageStats.saved - 1);
+  else if (entry.action === 'dismiss') triageStats.dismissed = Math.max(0, triageStats.dismissed - 1);
+  else if (entry.action === 'next') triageStats.skipped = Math.max(0, triageStats.skipped - 1);
+  // Go back
+  triageIndex = entry.index;
+  showTriageFlash('undo');
+  saveTriageProgress();
+  renderTriageCard();
 }
 
 function showTriageFlash(type) {
@@ -1780,11 +1956,35 @@ function showTriageSummary() {
   html += statRow('opened', s.opened, 'fill-open');
   html += statRow('skipped', s.skipped, 'fill-skip');
   html += '</div>';
-  html += '<div class="summary-hint">Press <kbd>Esc</kbd> to return</div>';
+  html += '<div style="display:flex;gap:12px;justify-content:center;margin-top:20px;flex-wrap:wrap">';
+  if (triageStats.saved > 0) {
+    html += '<button class="triage-btn triage-btn-save" id="summaryViewSaved">View Saved</button>';
+  }
+  html += '<button class="triage-btn triage-btn-neutral" id="summaryNewTriage">New Triage</button>';
+  html += '</div>';
+  html += '<div class="summary-hint" style="margin-top:12px">Press <kbd>Esc</kbd> to return</div>';
 
   var summary = document.getElementById('triageSummary');
   summary.innerHTML = html;
   summary.style.display = '';
+
+  // Summary button handlers
+  var viewSavedBtn = document.getElementById('summaryViewSaved');
+  if (viewSavedBtn) {
+    viewSavedBtn.addEventListener('click', function() {
+      exitTriage();
+      activeMode = 'saved';
+      applyFilters();
+    });
+  }
+  document.getElementById('summaryNewTriage').addEventListener('click', function() {
+    document.getElementById('triageCard').style.display = '';
+    summary.style.display = 'none';
+    triageIndex = 0;
+    triageStats = { saved: 0, dismissed: 0, opened: 0, skipped: 0 };
+    triageHistory = [];
+    renderTriageCard();
+  });
 }
 
 function handleTriageKey(e) {
@@ -1809,9 +2009,18 @@ function handleTriageKey(e) {
       e.preventDefault();
       triageAction('open');
       break;
+    case 'z':
+      e.preventDefault();
+      triageUndo();
+      break;
     case 'Escape':
       e.preventDefault();
-      exitTriage();
+      // Unzoom image first if zoomed
+      if (document.getElementById('triageImgWrap').classList.contains('zoomed')) {
+        document.getElementById('triageImgWrap').classList.remove('zoomed');
+      } else {
+        exitTriage();
+      }
       break;
   }
 }
@@ -1823,6 +2032,41 @@ document.getElementById('content').addEventListener('dblclick', function(e) {
     e.preventDefault();
     enterTriage(parseInt(item.dataset.idx));
   }
+});
+
+// ── Triage touch/swipe ─────────────────────────────────
+(function() {
+  var touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+  var overlay = document.getElementById('triageOverlay');
+
+  overlay.addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].clientX;
+    touchStartY = e.changedTouches[0].clientY;
+    touchStartTime = Date.now();
+  }, { passive: true });
+
+  overlay.addEventListener('touchend', function(e) {
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    var dt = Date.now() - touchStartTime;
+    if (dt > 500 || Math.abs(dx) < 50) return;
+    if (Math.abs(dy) > Math.abs(dx)) return;
+    if (dx > 0) triageAction('save');
+    else triageAction('dismiss');
+  });
+
+  // Touch button clicks
+  overlay.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-triage-action]');
+    if (btn) triageAction(btn.dataset.triageAction);
+  });
+})();
+
+// ── Triage image zoom ──────────────────────────────────
+document.getElementById('triageImgWrap').addEventListener('click', function(e) {
+  // Don't zoom if clicking a button inside
+  if (e.target.closest('[data-triage-action]')) return;
+  this.classList.toggle('zoomed');
 });
 
 // ── Keyboard navigation ───────────────────────────────
@@ -1858,6 +2102,7 @@ document.addEventListener('keydown', function(e) {
         var p = filteredProducts[focusedIndex];
         if (selectedUrls.has(p.url)) selectedUrls.delete(p.url);
         else selectedUrls.add(p.url);
+        saveSaved();
         if (viewMode === 'grid') renderGrid(); else renderTable();
         updateFocus();
       }
@@ -1944,7 +2189,7 @@ document.addEventListener('drop', function(e) {
 // ── Load data ──────────────────────────────────────────
 function loadData(data) {
   loadHidden();
-  loadFavorites();
+  loadSaved();
   loadPreviousSessionUrls();
 
   if (data.meta) renderMeta(data.meta);
@@ -1959,8 +2204,15 @@ function loadData(data) {
     saveHidden();
   }
 
-  document.getElementById('controls').style.display = 'flex';
+  document.getElementById('controls').style.display = 'block';
   document.getElementById('discountSlider').value = data.meta?.min_discount_pct || 50;
+
+  // Collapse filters on mobile by default
+  if (window.innerWidth <= 768) {
+    filterPanelOpen = false;
+    document.getElementById('filterPanel').classList.add('collapsed');
+  }
+
   populateFilters();
   applyFilters();
 
