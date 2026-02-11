@@ -108,7 +108,7 @@
     align-items: center;
     border-top: 1px solid var(--border);
     max-height: 200px;
-    overflow: hidden;
+    overflow: visible;
     transition: max-height 0.2s ease, padding 0.2s ease, opacity 0.2s ease;
   }
   .filter-panel.collapsed {
@@ -116,6 +116,7 @@
     padding-top: 0;
     padding-bottom: 0;
     opacity: 0;
+    overflow: hidden;
     border-top-color: transparent;
   }
   .filter-toggle-btn {
