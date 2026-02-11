@@ -987,8 +987,8 @@
 <div class="controls" id="controls" style="display:none">
   <div class="controls-bar">
     <div class="mode-tabs" id="modeTabs">
-      <button class="mode-tab active" data-mode="all">All</button>
-      <button class="mode-tab" data-mode="new">New</button>
+      <button class="mode-tab active" data-mode="triage">Triage</button>
+      <button class="mode-tab" data-mode="all">All</button>
       <button class="mode-tab" data-mode="saved">Saved</button>
       <button class="mode-tab" data-mode="hidden">Hidden</button>
     </div>
@@ -1079,16 +1079,8 @@
     </div>
     <div class="triage-img-wrap" id="triageImgWrap"></div>
     <div class="triage-info" id="triageInfo"></div>
-    <div class="triage-actions">
-      <kbd>&larr;</kbd><kbd>k</kbd> prev &nbsp;
-      <kbd>&rarr;</kbd><kbd>j</kbd> next &nbsp;
-      <kbd>s</kbd> save &nbsp;
-      <kbd>d</kbd> dismiss &nbsp;
-      <kbd>o</kbd> open &nbsp;
-      <kbd>z</kbd> undo &nbsp;
-      <kbd>Esc</kbd> exit
-    </div>
-    <div class="triage-touch-actions">
+    <div class="triage-actions" id="triageActionsHint"></div>
+    <div class="triage-touch-actions" id="triageTouchActions">
       <button class="triage-btn triage-btn-dismiss" data-triage-action="dismiss">Dismiss</button>
       <button class="triage-btn triage-btn-undo" data-triage-action="undo">Undo</button>
       <button class="triage-btn triage-btn-open" data-triage-action="open">Open</button>
@@ -1112,7 +1104,7 @@ let filteredProducts = [];
 let selectedUrls = new Set();
 let hiddenUrls = new Set();
 let previousSessionUrls = new Set();
-let activeMode = 'all'; // 'all' | 'new' | 'saved' | 'hidden'
+let activeMode = 'triage'; // 'triage' | 'all' | 'saved' | 'hidden'
 let activeCategory = '';
 let activeStore = '';
 let activeBrand = '';
@@ -1317,10 +1309,9 @@ function applyFilters() {
 
   filteredProducts = allProducts.filter(p => {
     // Mode filters
-    if (activeMode === 'all' && hiddenUrls.has(p.url)) return false;
+    if (activeMode === 'triage' && (selectedUrls.has(p.url) || hiddenUrls.has(p.url))) return false;
     if (activeMode === 'saved' && !selectedUrls.has(p.url)) return false;
     if (activeMode === 'hidden' && !hiddenUrls.has(p.url)) return false;
-    if (activeMode === 'new' && !isNewItem(p.url)) return false;
     // Standard filters
     if (activeStore && p.retailer !== activeStore) return false;
     if (activeBrand && p.brand !== activeBrand) return false;
@@ -1597,28 +1588,27 @@ document.getElementById('content').addEventListener('click', function(e) {
 
 function updateModeTabs() {
   var tabs = document.querySelectorAll('.mode-tab');
-  var newCount = allProducts.filter(function(p) { return isNewItem(p.url) && !hiddenUrls.has(p.url); }).length;
-  var savedCount = selectedUrls.size;
-  var hiddenCount = allProducts.filter(function(p) { return hiddenUrls.has(p.url); }).length;
-  var unseenCount = allProducts.filter(function(p) {
+  var triageCount = allProducts.filter(function(p) {
     return !selectedUrls.has(p.url) && !hiddenUrls.has(p.url);
   }).length;
+  var savedCount = selectedUrls.size;
+  var hiddenCount = allProducts.filter(function(p) { return hiddenUrls.has(p.url); }).length;
 
   tabs.forEach(function(tab) {
     var mode = tab.dataset.mode;
     tab.classList.toggle('active', mode === activeMode);
     switch (mode) {
-      case 'all':
-        tab.innerHTML = 'All' + (unseenCount > 0 ? '<span class="tab-count">' + unseenCount + ' unseen</span>' : '');
+      case 'triage':
+        tab.innerHTML = 'Triage<span class="tab-count">' + triageCount + '</span>';
         break;
-      case 'new':
-        tab.innerHTML = 'New' + (newCount > 0 ? '<span class="tab-count">' + newCount + '</span>' : '<span class="tab-count">0</span>');
+      case 'all':
+        tab.innerHTML = 'All<span class="tab-count">' + allProducts.length + '</span>';
         break;
       case 'saved':
-        tab.innerHTML = '\u2605 Saved' + '<span class="tab-count">' + savedCount + '</span>';
+        tab.innerHTML = '\u2605 Saved<span class="tab-count">' + savedCount + '</span>';
         break;
       case 'hidden':
-        tab.innerHTML = 'Hidden' + '<span class="tab-count">' + hiddenCount + '</span>';
+        tab.innerHTML = 'Hidden<span class="tab-count">' + hiddenCount + '</span>';
         break;
     }
   });
@@ -1835,6 +1825,29 @@ function renderTriageCard() {
   if (triageStats.opened) parts.push(triageStats.opened + ' opened');
   document.getElementById('triageStats').textContent = parts.length ? parts.join(' \u00b7 ') : '';
 
+  // Update action hints and touch buttons based on mode
+  var sAction = activeMode === 'saved' ? 'unsave' : 'save';
+  var dAction = activeMode === 'hidden' ? 'unhide' : 'dismiss';
+  var sLabel = activeMode === 'saved' ? 'unsave' : 'save';
+  var dLabel = activeMode === 'hidden' ? 'unhide' : 'dismiss';
+
+  // Touch buttons
+  var touchEl = document.getElementById('triageTouchActions');
+  if (touchEl) {
+    var dBtn = touchEl.querySelector('[data-triage-action="dismiss"], [data-triage-action="unhide"]');
+    var sBtn = touchEl.querySelector('[data-triage-action="save"], [data-triage-action="unsave"]');
+    if (dBtn) { dBtn.dataset.triageAction = dAction; dBtn.textContent = dLabel.charAt(0).toUpperCase() + dLabel.slice(1); }
+    if (sBtn) { sBtn.dataset.triageAction = sAction; sBtn.textContent = sLabel.charAt(0).toUpperCase() + sLabel.slice(1); }
+  }
+  document.getElementById('triageActionsHint').innerHTML =
+    '<kbd>&larr;</kbd><kbd>k</kbd> prev &nbsp; ' +
+    '<kbd>&rarr;</kbd><kbd>j</kbd> next &nbsp; ' +
+    '<kbd>s</kbd> ' + sLabel + ' &nbsp; ' +
+    '<kbd>d</kbd> ' + dLabel + ' &nbsp; ' +
+    '<kbd>o</kbd> open &nbsp; ' +
+    '<kbd>z</kbd> undo &nbsp; ' +
+    '<kbd>Esc</kbd> exit';
+
   // Re-trigger slide animation
   var card = document.getElementById('triageCard');
   card.style.animation = 'none';
@@ -1850,7 +1863,7 @@ function triageAction(action) {
   var p = triageQueue[triageIndex];
 
   // Push undo history for state-changing actions
-  if (action === 'save' || action === 'dismiss' || action === 'next') {
+  if (action === 'save' || action === 'dismiss' || action === 'unsave' || action === 'unhide' || action === 'next') {
     triageHistory.push({
       action: action,
       url: p.url,
@@ -1876,10 +1889,29 @@ function triageAction(action) {
       break;
     case 'dismiss':
       hiddenUrls.add(p.url);
-      // Don't remove saved state — items can be both saved and hidden
       saveHidden();
       triageStats.dismissed++;
       showTriageFlash('dismiss');
+      triageIndex++;
+      saveTriageProgress();
+      if (triageIndex >= triageQueue.length) { showTriageSummary(); return; }
+      renderTriageCard();
+      break;
+    case 'unsave':
+      selectedUrls.delete(p.url);
+      saveSaved();
+      triageStats.dismissed++;
+      showTriageFlash('dismiss');
+      triageIndex++;
+      saveTriageProgress();
+      if (triageIndex >= triageQueue.length) { showTriageSummary(); return; }
+      renderTriageCard();
+      break;
+    case 'unhide':
+      hiddenUrls.delete(p.url);
+      saveHidden();
+      triageStats.saved++;
+      showTriageFlash('save');
       triageIndex++;
       saveTriageProgress();
       if (triageIndex >= triageQueue.length) { showTriageSummary(); return; }
@@ -1916,8 +1948,8 @@ function triageUndo() {
   else hiddenUrls.delete(entry.url);
   saveSaved(); saveHidden();
   // Undo stat
-  if (entry.action === 'save') triageStats.saved = Math.max(0, triageStats.saved - 1);
-  else if (entry.action === 'dismiss') triageStats.dismissed = Math.max(0, triageStats.dismissed - 1);
+  if (entry.action === 'save' || entry.action === 'unhide') triageStats.saved = Math.max(0, triageStats.saved - 1);
+  else if (entry.action === 'dismiss' || entry.action === 'unsave') triageStats.dismissed = Math.max(0, triageStats.dismissed - 1);
   else if (entry.action === 'next') triageStats.skipped = Math.max(0, triageStats.skipped - 1);
   // Go back
   triageIndex = entry.index;
@@ -1999,11 +2031,13 @@ function handleTriageKey(e) {
       break;
     case 's':
       e.preventDefault();
-      triageAction('save');
+      if (activeMode === 'saved') triageAction('unsave');
+      else triageAction('save');
       break;
     case 'd':
       e.preventDefault();
-      triageAction('dismiss');
+      if (activeMode === 'hidden') triageAction('unhide');
+      else triageAction('dismiss');
       break;
     case 'o': case 'Enter':
       e.preventDefault();
@@ -2051,8 +2085,8 @@ document.getElementById('content').addEventListener('dblclick', function(e) {
     var dt = Date.now() - touchStartTime;
     if (dt > 500 || Math.abs(dx) < 50) return;
     if (Math.abs(dy) > Math.abs(dx)) return;
-    if (dx > 0) triageAction('save');
-    else triageAction('dismiss');
+    if (dx > 0) triageAction(activeMode === 'saved' ? 'unsave' : 'save');
+    else triageAction(activeMode === 'hidden' ? 'unhide' : 'dismiss');
   });
 
   // Touch button clicks
